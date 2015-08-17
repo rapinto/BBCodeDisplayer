@@ -1,15 +1,35 @@
 //
 //  BBCodeDisplayer.m
-//  Dealabs
+//
 //
 //  Created by Raphaël Pinto on 04/09/2014.
-//  Copyright (c) 2014 HUME Network. All rights reserved.
 //
+// The MIT License (MIT)
+// Copyright (c) 2015 Raphael Pinto.
+//
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included in
+// all copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+// THE SOFTWARE.
+
+
 
 #import "BBCodeDisplayer.h"
 #import "Utils.h"
 #import "CustomUITextView.h"
-#import "Constants.h"
 
 
 
@@ -17,16 +37,16 @@
 #define kClosingQuote @"[/citer]"
 #define kOpeningSpoiler @"[spoiler]"
 #define kClosingSpoiler @"[/spoiler]"
-
+#define kSpoilerClosedHeight 25
 
 
 @implementation BBCodeDisplayer
 
 
 
-@synthesize mDelegate;
-@synthesize mSpoilerDelegate;
-@synthesize mTextColor;
+@synthesize delegate;
+@synthesize spoilerDelegate;
+@synthesize textColor;
 
 
 
@@ -42,6 +62,8 @@
     if (self)
     {
         [self setupGestureRecognizer];
+        
+        self.linkColor = [UIColor colorWithRed:20.0/255.0f green:149.0/255.0f blue:180.0/255.0f alpha:1.0f];
     }
     
     return self;
@@ -55,6 +77,8 @@
     if (self)
     {
         [self setupGestureRecognizer];
+        
+        self.linkColor = [UIColor colorWithRed:20.0/255.0f green:149.0/255.0f blue:180.0/255.0f alpha:1.0f];
     }
     
     return self;
@@ -63,8 +87,8 @@
 
 - (void)dealloc
 {
-    [_mLongPress removeTarget:self action:@selector(didLongPress:)];
-    [_mTapGesture removeTarget:self action:@selector(onSpoilerButtonPressed)];
+    [_longPress removeTarget:self action:@selector(didLongPress:)];
+    [_tapGesture removeTarget:self action:@selector(onSpoilerButtonPressed)];
 }
 
 
@@ -74,127 +98,138 @@
 
 
 
-- (void)setupWithHTMLString:(NSString*)_HTML
-                      width:(float)_Width
-              currentHeight:(float)_StartingCurrentHeight
-                   delegate:(NSObject<UITextViewDelegate>*)_Delegate
-            spoilerDelegate:(NSObject<SpoilerDelegate>*)_SpoilerDelegate
+- (void)setupWithBBCodeString:(NSString*)BBCode
+                        width:(float)width
+                currentHeight:(float)startingCurrentHeight
+                     delegate:(NSObject<UITextViewDelegate>*)delegateObj
+              spoilerDelegate:(NSObject<SpoilerDelegate>*)spoilerDelegateObj
 {
     for (UIView* aView in self.subviews)
     {
         [aView removeFromSuperview];
     }
-    self.mDelegate = _Delegate;
-    self.mSpoilerDelegate = _SpoilerDelegate;
-    self.mHTMLString = _HTML;
-    self.mCurrentHeight = _StartingCurrentHeight;
-    self.mCurrentCharacterIndex = 0;
-        
-    while (self.mCurrentCharacterIndex < [_HTML length])
+    self.delegate = delegateObj;
+    self.spoilerDelegate = spoilerDelegateObj;
+    self.BBCodeString = BBCode;
+    self.currentHeight = startingCurrentHeight;
+    self.currentCharacterIndex = 0;
+    
+    
+    NSLog(@"setupWithBBCodeString BBCode %@", BBCode);
+    while (self.currentCharacterIndex < [BBCode length])
     {
+        NSLog(@"==================================================");
         BOOL lNextTagIsQuote = YES;
         NSRange lNextOpenedTagRange = NSMakeRange(NSNotFound, 0);
         
-        NSRange lOpeningQuoteRange = [self quoteRangeInString:self.mHTMLString  currentCharIndex:self.mCurrentCharacterIndex];
+        
+        NSRange lOpeningQuoteRange = [self quoteRangeInString:self.BBCodeString  currentCharIndex:self.currentCharacterIndex];
         
         if (lOpeningQuoteRange.location != NSNotFound)
         {
             lNextOpenedTagRange = lOpeningQuoteRange;
         }
        
-        NSRange lOpeningSpoilerRange = [self spoilerRangeInString:self.mHTMLString currentCharIndex:self.mCurrentCharacterIndex];
+        NSRange lOpeningSpoilerRange = [self spoilerRangeInString:self.BBCodeString currentCharIndex:self.currentCharacterIndex];
         if ((lOpeningSpoilerRange.location != NSNotFound) && (lOpeningQuoteRange.location == NSNotFound || lOpeningSpoilerRange.location < lOpeningQuoteRange.location))
         {
             lNextTagIsQuote = NO;
             lNextOpenedTagRange = lOpeningSpoilerRange;
         }
         
+        //NSLog(@"self.currentCharacterIndex 1 %lu", (unsigned long)self.currentCharacterIndex);
         NSString* lText = nil;
-        if ([self.mHTMLString length] >= self.mCurrentCharacterIndex)
+        if ([self.BBCodeString length] >= self.currentCharacterIndex)
         {
             if (lNextOpenedTagRange.location != NSNotFound)
             {
-                lText = [self.mHTMLString substringWithRange:NSMakeRange(self.mCurrentCharacterIndex, lNextOpenedTagRange.location - self.mCurrentCharacterIndex)];
+                lText = [self.BBCodeString substringWithRange:NSMakeRange(self.currentCharacterIndex, lNextOpenedTagRange.location - self.currentCharacterIndex)];
             }
-            else if ([self.mHTMLString length] >= self.mCurrentCharacterIndex)
+            else if ([self.BBCodeString length] >= self.currentCharacterIndex)
             {
-                lText = [self.mHTMLString substringFromIndex:self.mCurrentCharacterIndex];
+                lText = [self.BBCodeString substringFromIndex:self.currentCharacterIndex];
             }
         }
         
         
+        //NSLog(@"self.currentCharacterIndex 2 %lu", (unsigned long)self.currentCharacterIndex);
         
         if (lNextOpenedTagRange.location != NSNotFound)
         {
-            NSRange lSubRange = NSMakeRange(self.mCurrentCharacterIndex, lNextOpenedTagRange.location - self.mCurrentCharacterIndex);
+            NSRange lSubRange = NSMakeRange(self.currentCharacterIndex, lNextOpenedTagRange.location - self.currentCharacterIndex);
             
             if ([lText length] > lSubRange.location + lSubRange.length)
             {
-                lText =  [self.mHTMLString substringWithRange:lSubRange];
+                lText =  [self.BBCodeString substringWithRange:lSubRange];
             }
         }
         if ([lText length] > 0)
         {
-            [self addTextViewWithString:lText width:_Width];
+            [self addTextViewWithString:lText width:width];
         }
         
+        
+       // NSLog(@"self.BBCodeString %lu", (unsigned long)[self.BBCodeString length]);
+       // NSLog(@"self.currentCharacterIndex 3 %lu", (unsigned long)self.currentCharacterIndex);
         
         if (lNextTagIsQuote && lOpeningQuoteRange.location != NSNotFound)
         {
-            NSString* lText = [self.mHTMLString substringFromIndex:self.mCurrentCharacterIndex];
+            NSString* lText = [self.BBCodeString substringFromIndex:self.currentCharacterIndex];
             
-            [self addQuoteWithString:lText width:_Width];
+            [self addQuoteWithString:lText width:width];
         }
         else if (lOpeningSpoilerRange.location != NSNotFound)
         {
-            NSString* lText = [self.mHTMLString substringFromIndex:self.mCurrentCharacterIndex];
+            NSLog(@"new loop 1 %@", [BBCode substringFromIndex:self.currentCharacterIndex]);
+            NSString* lText = [self.BBCodeString substringFromIndex:self.currentCharacterIndex];
             
-            [self addSpoilerWithString:lText width:_Width];
+            [self addSpoilerWithString:lText width:width];
         }
+        NSLog(@"new loop 2 %@", [BBCode substringFromIndex:self.currentCharacterIndex]);
     }
     
     self.frame = CGRectMake(self.frame.origin.x,
                             self.frame.origin.y,
                             self.frame.size.width,
-                            self.mCurrentHeight + _StartingCurrentHeight);
+                            self.currentHeight + startingCurrentHeight);
 }
 
 
-- (void)setupWithHTMLString:(NSString*)_HTML
-                      width:(float)_Width
-                   delegate:(NSObject<UITextViewDelegate>*)_Delegate
-            spoilerDelegate:(NSObject<SpoilerDelegate>*)_SpoilerDelegate
+- (void)setupWithBBCodeString:(NSString*)BBCode
+                      width:(float)width
+                   delegate:(NSObject<UITextViewDelegate>*)delegateObj
+            spoilerDelegate:(NSObject<SpoilerDelegate>*)spoilerDelegateObj
 {
-    [self setupWithHTMLString:_HTML
-                        width:_Width
-                currentHeight:0
-                     delegate:_Delegate
-              spoilerDelegate:_SpoilerDelegate];
+    [self setupWithBBCodeString:BBCode
+                        width:width
+                currentHeight:5
+                     delegate:delegateObj
+              spoilerDelegate:spoilerDelegateObj];
 }
 
 
-- (void)addTextViewWithString:(NSString*)_HTMLString
-                        width:(float)_Width
+- (void)addTextViewWithString:(NSString*)BBCodeString
+                        width:(float)width
 {
-    NSMutableAttributedString* lAttributedString = [BBCodeDisplayer attributtedStringFromBBCode:_HTMLString replaceSmiley:YES];
+    NSMutableAttributedString* lAttributedString = [BBCodeDisplayer attributtedStringFromBBCode:BBCodeString replaceSmiley:YES];
 
     if ([lAttributedString length] == 0)
     {
-        self.mCurrentCharacterIndex += [_HTMLString length];
+        self.currentCharacterIndex += [BBCodeString length];
         return;
     }
     
     CustomUITextView* lTextView = [[CustomUITextView alloc] initWithFrame:CGRectMake(5,
-                                                                         _mCurrentHeight,
-                                                                         _Width - 5,
+                                                                         _currentHeight,
+                                                                         width - 5,
                                                                          5)];
     
-    
+    //lTextView.font = [UIFont fontWithName:@"Helvetica" size:12];
     [lTextView setAttributedText:lAttributedString];
     
-    if (self.mTextColor)
+    if (self.textColor)
     {
-        lTextView.textColor = self.mTextColor;
+        lTextView.textColor = self.textColor;
     }
     else
     {
@@ -211,22 +246,18 @@
     lTextView.clipsToBounds = YES;
     lTextView.scrollEnabled = NO;
     
-    if (self.mLinkColor)
-    {
-        [lTextView setLinkTextAttributes:[NSDictionary dictionaryWithObject:self.mLinkColor forKey:NSForegroundColorAttributeName]];
-    }
-    else
-    {
-        [lTextView setLinkTextAttributes:[NSDictionary dictionaryWithObject:kDealabsBlue forKey:NSForegroundColorAttributeName]];
-    }
+   
+    [lTextView setLinkTextAttributes:[NSDictionary dictionaryWithObject:self.linkColor forKey:NSForegroundColorAttributeName]];
+    
     
     lTextView.delegate = self;
-    [lTextView addGestureRecognizer:self.mLongPress];
+    [lTextView addGestureRecognizer:self.longPress];
     
-    CGSize size = [lTextView sizeThatFits:CGSizeMake(_Width - 5, FLT_MAX)];
+    
+    CGSize size = [lTextView sizeThatFits:CGSizeMake(lTextView.frame.size.width, FLT_MAX)];
     lTextView.frame = CGRectMake(5,
-                                 _mCurrentHeight,
-                                 _Width - 5,
+                                 _currentHeight,
+                                 lTextView.frame.size.width,
                                  size.height);
     
     
@@ -234,35 +265,35 @@
     [self addSubview:lTextView];
 
     
-    self.mCurrentHeight += size.height;
-    self.mCurrentCharacterIndex += [_HTMLString length];
+    self.currentHeight += size.height;
+    self.currentCharacterIndex += [BBCodeString length];
 }
 
 
-- (void)addQuoteWithString:(NSString*)_HTMLString width:(float)_Width
+- (void)addQuoteWithString:(NSString*)BBCodeString width:(float)width
 {
-    NSString* lQuotedHTML = [self getQuoteSubstringFromHTMLString:_HTMLString];
+    NSString* lQuotedBBCode = [self getQuoteSubstringFromBBCodeString:BBCodeString];
     
     
-    if ([lQuotedHTML length] == 0)
+    if ([lQuotedBBCode length] == 0)
     {
-        self.mCurrentCharacterIndex += [kOpeningQuote length];
+        self.currentCharacterIndex += [kOpeningQuote length];
         return;
     }
     
     BBCodeDisplayer* lQuote = [[BBCodeDisplayer alloc] initWithFrame:CGRectMake(5,
-                                                                                _mCurrentHeight + 5,
-                                                                                _Width - 10,
+                                                                                _currentHeight + 5,
+                                                                                width - 10,
                                                                                 10)];
-    lQuote.mParent = self;
-    lQuote.mIsQuote = YES;
-    [lQuote setupWithHTMLString:lQuotedHTML
-                          width:_Width - 10
+    lQuote.parent = self;
+    lQuote.isQuote = YES;
+    [lQuote setupWithBBCodeString:lQuotedBBCode
+                          width:width - 10
                   currentHeight:5
-                       delegate:self.mDelegate
-                spoilerDelegate:self.mSpoilerDelegate];
+                       delegate:self.delegate
+                spoilerDelegate:self.spoilerDelegate];
     
-    lQuote.mDelegate = self.mDelegate;
+    lQuote.delegate = self.delegate;
     lQuote.backgroundColor = [UIColor whiteColor];
     lQuote.clipsToBounds = YES;
     
@@ -277,46 +308,51 @@
     lLeftGrey.backgroundColor = [UIColor colorWithRed:197.0f/255.0f green:197.0f/255.0f blue:197.0f/255.0f alpha:1.0f];
     [lQuote addSubview:lLeftGrey];
     
-    self.mCurrentHeight = lQuote.frame.origin.y + lQuote.frame.size.height;
+    self.currentHeight = lQuote.frame.origin.y + lQuote.frame.size.height;
     
-    self.mCurrentCharacterIndex += [lQuotedHTML length] + [kOpeningQuote length] + [kClosingQuote length];
-    self.mHasAlreadyLoaded = YES;
+    self.currentCharacterIndex += [lQuotedBBCode length] + [kOpeningQuote length] + [kClosingQuote length];
+    self.hasAlreadyLoaded = YES;
 }
 
 
-- (void)addSpoilerWithString:(NSString*)_HTMLString width:(float)_Width
+- (void)addSpoilerWithString:(NSString*)BBCodeString width:(float)width
 {
-    NSString* lSpoiledHTML = [self getSpoilerSubstringFromHTMLString:_HTMLString];
+    NSString* lSpoiledBBCode = [self getSpoilerSubstringFromBBCodeString:BBCodeString];
     
-    if ([lSpoiledHTML length] == 0)
+    if ([lSpoiledBBCode length] == 0)
     {
-        self.mCurrentCharacterIndex += [kOpeningSpoiler length];
+        self.currentCharacterIndex += [kOpeningSpoiler length];
         return;
     }
     
     
     BBCodeDisplayer* lSpoiler = [[BBCodeDisplayer alloc] initWithFrame:CGRectMake(5,
-                                                                                  _mCurrentHeight + 5,
-                                                                                  _Width - 10,
+                                                                                  _currentHeight + 5,
+                                                                                  width - 10,
                                                                                   10)];
-        
     
-    lSpoiler.mDelegate = self.mDelegate;
+    lSpoiler.delegate = self.delegate;
     lSpoiler.clipsToBounds = YES;
-    lSpoiler.mParent = self;
-    lSpoiler.mIsSpoiler = YES;
+    lSpoiler.parent = self;
+    lSpoiler.isSpoiler = YES;
     
-    [lSpoiler setupWithHTMLString:lSpoiledHTML
-                            width:_Width - 10
-                    currentHeight:5
-                         delegate:self.mDelegate
-                  spoilerDelegate:self.mSpoilerDelegate];
+    [lSpoiler setupWithBBCodeString:lSpoiledBBCode
+                              width:width - 10
+                      currentHeight:kSpoilerClosedHeight
+                           delegate:self.delegate
+                    spoilerDelegate:self.spoilerDelegate];
+    
+    UILabel* lTitleLabel = [[UILabel alloc] initWithFrame:CGRectMake(5,
+                                                                     0,
+                                                                     width - 10,
+                                                                     kSpoilerClosedHeight)];
+    lTitleLabel.textColor = textColor;
+    lTitleLabel.font = [UIFont fontWithName:@"Helvetica-Bold" size:12];
+    lTitleLabel.attributedText = [BBCodeDisplayer attributtedStringFromBBCode:@"[b]Spoiler[/b]" replaceSmiley:NO];
+    [lSpoiler addSubview:lTitleLabel];
     
     
-    CGRect lSpoilerFrame = lSpoiler.frame;
-    lSpoilerFrame.size.height = lSpoilerFrame.size.height + 5;
-    lSpoiler.frame = lSpoilerFrame;
-    lSpoiler.mCurrentHeight += 5;
+    lSpoiler.currentHeight += 5;
     
     
     lSpoiler.backgroundColor = [UIColor colorWithRed:238.0f/255.0f green:238.0f/255.0f blue:238.0f/255.0f alpha:1.0f];
@@ -324,9 +360,9 @@
     
     [self addSubview:lSpoiler];
     
-    [lSpoiler addGestureRecognizer:lSpoiler.mTapGesture];
+    [lSpoiler addGestureRecognizer:lSpoiler.tapGesture];
     
-    lSpoiler.mIsSpoilerClosed = YES;
+    lSpoiler.isSpoilerClosed = YES;
     
     // Left Color
     UIView* lLeftGrey = [[UIView alloc] initWithFrame:CGRectMake(0,
@@ -345,10 +381,10 @@
     lSpoiler.frame = CGRectMake(lSpoiler.frame.origin.x,
                                 lSpoiler.frame.origin.y,
                                 lSpoiler.frame.size.width,
-                                25);
-    self.mCurrentHeight = lSpoiler.frame.origin.y + lSpoiler.frame.size.height + 5;
+                                kSpoilerClosedHeight);
+    self.currentHeight = lSpoiler.frame.origin.y + lSpoiler.frame.size.height + 5;
     
-    self.mCurrentCharacterIndex += [lSpoiledHTML length] + [kOpeningSpoiler length] + [kClosingSpoiler length];
+    self.currentCharacterIndex += [lSpoiledBBCode length] + [kOpeningSpoiler length] + [kClosingSpoiler length];
 }
 
 
@@ -358,47 +394,47 @@
 
 
 
-- (NSRange)quoteRangeInString:(NSString*)_String currentCharIndex:(NSInteger)_CurrentCharIndex
+- (NSRange)quoteRangeInString:(NSString*)string currentCharIndex:(NSInteger)currentCharIndex
 {
-    if ([_String length] < _CurrentCharIndex)
+    if ([string length] < currentCharIndex)
     {
         return NSMakeRange(NSNotFound, 0);
     }
     
-    return [_String rangeOfString:kOpeningQuote options:NSCaseInsensitiveSearch range:NSMakeRange(_CurrentCharIndex, [_String length] - _CurrentCharIndex)];
+    return [string rangeOfString:kOpeningQuote options:NSCaseInsensitiveSearch range:NSMakeRange(currentCharIndex, [string length] - currentCharIndex)];
 }
 
 
-- (NSRange)spoilerRangeInString:(NSString*)_String currentCharIndex:(NSInteger)_CurrentCharIndex
+- (NSRange)spoilerRangeInString:(NSString*)string currentCharIndex:(NSInteger)currentCharIndex
 {
-    if ([_String length] < _CurrentCharIndex)
+    if ([string length] < currentCharIndex)
     {
         return NSMakeRange(NSNotFound, 0);
     }
     
-    return [_String rangeOfString:kOpeningSpoiler options:NSCaseInsensitiveSearch range:NSMakeRange(_CurrentCharIndex, [_String length] - _CurrentCharIndex)];
+    return [string rangeOfString:kOpeningSpoiler options:NSCaseInsensitiveSearch range:NSMakeRange(currentCharIndex, [string length] - currentCharIndex)];
 }
 
 
-- (NSRange)endingQuoteRangeInString:(NSString*)_String currentCharIndex:(NSInteger)_CurrentCharIndex
+- (NSRange)endingQuoteRangeInString:(NSString*)string currentCharIndex:(NSInteger)currentCharIndex
 {
-    if ([_String length] < _CurrentCharIndex)
+    if ([string length] < currentCharIndex)
     {
         return NSMakeRange(NSNotFound, 0);
     }
     
-    return [_String rangeOfString:kClosingQuote options:NSCaseInsensitiveSearch range:NSMakeRange(_CurrentCharIndex, [_String length] - _CurrentCharIndex)];
+    return [string rangeOfString:kClosingQuote options:NSCaseInsensitiveSearch range:NSMakeRange(currentCharIndex, [string length] - currentCharIndex)];
 }
 
 
-- (NSRange)endingSpoilerRangeInString:(NSString*)_String currentCharIndex:(NSInteger)_CurrentCharIndex
+- (NSRange)endingSpoilerRangeInString:(NSString*)string currentCharIndex:(NSInteger)currentCharIndex
 {
-    if ([_String length] < _CurrentCharIndex)
+    if ([string length] < currentCharIndex)
     {
         return NSMakeRange(NSNotFound, 0);
     }
     
-    return [_String rangeOfString:kClosingSpoiler options:NSCaseInsensitiveSearch range:NSMakeRange(_CurrentCharIndex, [_String length] - _CurrentCharIndex)];
+    return [string rangeOfString:kClosingSpoiler options:NSCaseInsensitiveSearch range:NSMakeRange(currentCharIndex, [string length] - currentCharIndex)];
 }
 
 
@@ -408,47 +444,47 @@
 
 
 
-+ (void)replaceBBCodeOpeningTag:(NSString*)_OpeningTag
-                     closingTag:(NSString*)_CLosingTag
-               attributedString:(NSMutableAttributedString*)_AttributedString
-                      attribute:(NSString*)_AttributeName
-                          value:(id)_AttributeValue
++ (void)replaceBBCodeOpeningTag:(NSString*)openingTag
+                     closingTag:(NSString*)closingTag
+               attributedString:(NSMutableAttributedString*)attributedString
+                      attribute:(NSString*)attributeName
+                          value:(id)attributeValue
 {
-    NSString* lRegExOpenningTag = [_OpeningTag stringByReplacingOccurrencesOfString:@"[" withString:@"\\["];
+    NSString* lRegExOpenningTag = [openingTag stringByReplacingOccurrencesOfString:@"[" withString:@"\\["];
     lRegExOpenningTag = [lRegExOpenningTag stringByReplacingOccurrencesOfString:@"]" withString:@"\\]"];
     int lRemovedCharacters = 0;
     
-    NSString* lRegExClosingTag = [_CLosingTag stringByReplacingOccurrencesOfString:@"[" withString:@"\\["];
+    NSString* lRegExClosingTag = [closingTag stringByReplacingOccurrencesOfString:@"[" withString:@"\\["];
     lRegExClosingTag = [lRegExClosingTag stringByReplacingOccurrencesOfString:@"]" withString:@"\\]"];
     lRegExClosingTag = [lRegExClosingTag stringByReplacingOccurrencesOfString:@"/" withString:@"\\/"];
     
     
     NSRegularExpression* lRegex = [NSRegularExpression regularExpressionWithPattern:[NSString stringWithFormat:@"%@(.*)%@", lRegExOpenningTag, lRegExClosingTag]options:0 error:NULL];
-    NSArray* lMatches = [lRegex matchesInString:_AttributedString.string options:0 range:NSMakeRange(0, [_AttributedString.string length])];
+    NSArray* lMatches = [lRegex matchesInString:attributedString.string options:0 range:NSMakeRange(0, [attributedString.string length])];
     
     
     for (NSTextCheckingResult* aTextCheckingResult in lMatches)
     {
-        NSString* lSubString = [_AttributedString.string substringWithRange:NSMakeRange([aTextCheckingResult range].location - lRemovedCharacters, [aTextCheckingResult range].length)];
-        lSubString = [lSubString substringWithRange:NSMakeRange([_OpeningTag length], [lSubString length] - [_OpeningTag length] - [_CLosingTag length])];
+        NSString* lSubString = [attributedString.string substringWithRange:NSMakeRange([aTextCheckingResult range].location - lRemovedCharacters, [aTextCheckingResult range].length)];
+        lSubString = [lSubString substringWithRange:NSMakeRange([openingTag length], [lSubString length] - [openingTag length] - [closingTag length])];
         
-        [_AttributedString replaceCharactersInRange:NSMakeRange([aTextCheckingResult range].location - lRemovedCharacters, [aTextCheckingResult range].length) withString:lSubString];
-        [_AttributedString addAttribute:_AttributeName value:_AttributeValue range:NSMakeRange([aTextCheckingResult range].location - lRemovedCharacters, [lSubString length])];
+        [attributedString replaceCharactersInRange:NSMakeRange([aTextCheckingResult range].location - lRemovedCharacters, [aTextCheckingResult range].length) withString:lSubString];
+        [attributedString addAttribute:attributeName value:attributeValue range:NSMakeRange([aTextCheckingResult range].location - lRemovedCharacters, [lSubString length])];
         
         lRemovedCharacters = [aTextCheckingResult range].length - [lSubString length];
     }
 }
 
 
-+ (void)replaceBBCodeLinkWithAttributedString:(NSMutableAttributedString*)_AttributedString
++ (void)replaceBBCodeLinkWithAttributedString:(NSMutableAttributedString*)attributedString
 {
     NSRegularExpression* lRegex = [NSRegularExpression regularExpressionWithPattern:@"\\[url=(.*)\\](.*)\\[\\/url\\]" options:0 error:NULL];
-    NSArray* lMatches = [lRegex matchesInString:_AttributedString.string options:0 range:NSMakeRange(0, [_AttributedString.string length])];
+    NSArray* lMatches = [lRegex matchesInString:attributedString.string options:0 range:NSMakeRange(0, [attributedString.string length])];
     int lRemovedCharacters = 0;
     
     for (NSTextCheckingResult* aTextCheckingResult in lMatches)
     {
-        NSString* lSubString = [_AttributedString.string substringWithRange:NSMakeRange([aTextCheckingResult range].location - lRemovedCharacters, [aTextCheckingResult range].length)];
+        NSString* lSubString = [attributedString.string substringWithRange:NSMakeRange([aTextCheckingResult range].location - lRemovedCharacters, [aTextCheckingResult range].length)];
 
         
         // Extract the full url
@@ -460,42 +496,43 @@
         
         // Extract the visible URL
         NSRange lVisibleURLRange = NSMakeRange([aTextCheckingResult range].location + [lMatch2 range].length - lRemovedCharacters, [aTextCheckingResult range].length - ([lMatch2 range].length + 6)); // 6 is the lenght of [/url]
-        NSString* lVisibleURL = [_AttributedString.string substringWithRange:lVisibleURLRange];
+        NSString* lVisibleURL = [attributedString.string substringWithRange:lVisibleURLRange];
         
         
         // Replace the BBCode Link by the attributted string
-        [_AttributedString replaceCharactersInRange:NSMakeRange([aTextCheckingResult range].location - lRemovedCharacters, [aTextCheckingResult range].length) withString:lVisibleURL];
-        [_AttributedString addAttribute:NSLinkAttributeName value:lURL range:NSMakeRange([aTextCheckingResult range].location - lRemovedCharacters, [lVisibleURL length])];
+        [attributedString replaceCharactersInRange:NSMakeRange([aTextCheckingResult range].location - lRemovedCharacters, [aTextCheckingResult range].length) withString:lVisibleURL];
+        [attributedString addAttribute:NSLinkAttributeName value:lURL range:NSMakeRange([aTextCheckingResult range].location - lRemovedCharacters, [lVisibleURL length])];
         
         lRemovedCharacters = [aTextCheckingResult range].length - [lVisibleURL length];
     }
 }
 
 
-+ (void)replaceImageOpeningTag:(NSString*)_OpeningTag
-                    closingTag:(NSString*)_CLosingTag
-              attributedString:(NSMutableAttributedString*)_AttributedString
++ (void)replaceImageOpeningTag:(NSString*)openingTag
+                    closingTag:(NSString*)closingTag
+              attributedString:(NSMutableAttributedString*)attributedString
 {
     NSRegularExpression* lRegex = [NSRegularExpression regularExpressionWithPattern:@"\\[img\\]([A-Za-z0-9_.-~]{1,})\\[\\/img\\]" options:0 error:NULL];
-    NSArray* lMatches = [lRegex matchesInString:_AttributedString.string options:0 range:NSMakeRange(0, [_AttributedString.string length])];
+    NSArray* lMatches = [lRegex matchesInString:attributedString.string options:0 range:NSMakeRange(0, [attributedString.string length])];
     int lRemovedCharacters = 0;
     
     
     for (NSTextCheckingResult* aTextCheckingResult in lMatches)
     {
-        NSString* lSubString = [_AttributedString.string substringWithRange:NSMakeRange([aTextCheckingResult range].location + [_OpeningTag length] - lRemovedCharacters, [aTextCheckingResult range].length - [_OpeningTag length] - [_CLosingTag length])];
+        NSString* lSubString = [attributedString.string substringWithRange:NSMakeRange([aTextCheckingResult range].location + [openingTag length] - lRemovedCharacters, [aTextCheckingResult range].length - [openingTag length] - [closingTag length])];
         
-        [_AttributedString replaceCharactersInRange:NSMakeRange([aTextCheckingResult range].location - lRemovedCharacters, [aTextCheckingResult range].length) withString:lSubString];
-        [_AttributedString addAttribute:NSLinkAttributeName value:[NSString stringWithFormat:@"IMAGE_COMMENT_FULLSCREEN_%@", lSubString] range:NSMakeRange([aTextCheckingResult range].location - lRemovedCharacters, [lSubString length])];
+        [attributedString replaceCharactersInRange:NSMakeRange([aTextCheckingResult range].location - lRemovedCharacters, [aTextCheckingResult range].length) withString:lSubString];
+        [attributedString addAttribute:NSLinkAttributeName value:[NSString stringWithFormat:@"IMAGE_COMMENT_FULLSCREEN_%@", lSubString] range:NSMakeRange([aTextCheckingResult range].location - lRemovedCharacters, [lSubString length])];
         
         lRemovedCharacters = [aTextCheckingResult range].length - [lSubString length];
     }
 }
 
 
-+ (NSMutableAttributedString*)attributtedStringFromBBCode:(NSString*)_BBCodeString replaceSmiley:(BOOL)_ReplaceSmiley
++ (NSMutableAttributedString*)attributtedStringFromBBCode:(NSString*)BBCodeString replaceSmiley:(BOOL)replaceSmiley
 {
-    NSMutableAttributedString* AttributedString = [[NSMutableAttributedString alloc] initWithString:_BBCodeString];
+    NSString* lTrimmedString = [BBCodeString stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceAndNewlineCharacterSet]];
+    NSMutableAttributedString* AttributedString = [[NSMutableAttributedString alloc] initWithString:BBCodeString];
    
     
     [self replaceBBCodeOpeningTag:@"[s]"
@@ -529,7 +566,7 @@
                            attributedString:AttributedString];
     
     
-    if (_ReplaceSmiley)
+    if (replaceSmiley)
     {
         [BBCodeDisplayer replaceSmileyWithString:@"':)" smileyImage:@"evil.png" inMutableString:AttributedString];
         [BBCodeDisplayer replaceSmileyWithString:@":o" smileyImage:@"agape.png" inMutableString:AttributedString];
@@ -557,48 +594,48 @@
 }
 
 
-+ (void)replaceSmileyWithString:(NSString*)_SmileyString
-                    smileyImage:(NSString*)_SmileyImage
-                inMutableString:(NSMutableAttributedString*)_MutableString
++ (void)replaceSmileyWithString:(NSString*)smileyString
+                    smileyImage:(NSString*)smileyImage
+                inMutableString:(NSMutableAttributedString*)mutableString
 {
-    [self replaceOneKindOfSmiley:[NSString stringWithFormat:@" %@", _SmileyString]
-                           range:NSMakeRange(1,[_SmileyString length])
-                     smileyImage:_SmileyImage
-                 inMutableString:_MutableString];
-    [self replaceOneKindOfSmiley:[NSString stringWithFormat:@"%@ ", _SmileyString]
-                           range:NSMakeRange(0,[_SmileyString length])
-                     smileyImage:_SmileyImage
-                 inMutableString:_MutableString];
+    [self replaceOneKindOfSmiley:[NSString stringWithFormat:@" %@", smileyString]
+                           range:NSMakeRange(1,[smileyString length])
+                     smileyImage:smileyImage
+                 inMutableString:mutableString];
+    [self replaceOneKindOfSmiley:[NSString stringWithFormat:@"%@ ", smileyString]
+                           range:NSMakeRange(0,[smileyString length])
+                     smileyImage:smileyImage
+                 inMutableString:mutableString];
 }
 
 
-+ (void)replaceOneKindOfSmiley:(NSString*)_SmileyString
-                         range:(NSRange)_Range
-                   smileyImage:(NSString*)_SmileyImage
-               inMutableString:(NSMutableAttributedString*)_MutableString
++ (void)replaceOneKindOfSmiley:(NSString*)smileyString
+                         range:(NSRange)range
+                   smileyImage:(NSString*)smileyImage
+               inMutableString:(NSMutableAttributedString*)mutableString
 {
-    if ([_MutableString.string length] == 0)
+    if ([mutableString.string length] == 0)
     {
         return;
     }
     
     
-    NSRange lSmileyRange = [_MutableString.string rangeOfString:_SmileyString];
+    NSRange lSmileyRange = [mutableString.string rangeOfString:smileyString];
     
     while (lSmileyRange.location != NSNotFound)
     {
-        lSmileyRange = NSMakeRange(lSmileyRange.location + _Range.location, _Range.length);
+        lSmileyRange = NSMakeRange(lSmileyRange.location + range.location, range.length);
         
         NSTextAttachment *textAttachment = [[NSTextAttachment alloc] init];
-        textAttachment.image = [UIImage imageNamed:_SmileyImage];
+        textAttachment.image = [UIImage imageNamed:smileyImage];
         /* textAttachment.bounds = CGRectMake(textAttachment.bounds.origin.x,
          textAttachment.bounds.origin.y,
          13, 13);*/
         NSAttributedString *attrStringWithImage = [NSAttributedString attributedStringWithAttachment:textAttachment];
         
-        [_MutableString replaceCharactersInRange:lSmileyRange withAttributedString:attrStringWithImage];
+        [mutableString replaceCharactersInRange:lSmileyRange withAttributedString:attrStringWithImage];
         
-        lSmileyRange = [_MutableString.string rangeOfString:_SmileyString];
+        lSmileyRange = [mutableString.string rangeOfString:smileyString];
     }
 }
 
@@ -612,24 +649,24 @@
 - (void)setupGestureRecognizer
 {
     UILongPressGestureRecognizer* lGesture = [[UILongPressGestureRecognizer alloc] initWithTarget:self action:@selector(didLongPress:)];
-    self.mLongPress = lGesture;
-    [self addGestureRecognizer:self.mLongPress];
+    self.longPress = lGesture;
+    [self addGestureRecognizer:self.longPress];
     
     UITapGestureRecognizer* lTapGesture = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(onSpoilerButtonPressed)];
-    self.mTapGesture = lTapGesture;
+    self.tapGesture = lTapGesture;
 }
 
 
-- (NSString*)getSpoilerSubstringFromHTMLString:(NSString*)_HTMLString
+- (NSString*)getSpoilerSubstringFromBBCodeString:(NSString*)BBCodeString
 {
     int lNewOpenedTag = 0;
     unsigned long lCurrentCharLocation = 0;
     
     
-    while (lCurrentCharLocation < [_HTMLString length])
+    while (lCurrentCharLocation < [BBCodeString length])
     {
-        NSRange lOpenTagRange = [self spoilerRangeInString:_HTMLString currentCharIndex:lCurrentCharLocation];
-        NSRange lCloseTagRange = [self endingSpoilerRangeInString:_HTMLString currentCharIndex:lCurrentCharLocation];
+        NSRange lOpenTagRange = [self spoilerRangeInString:BBCodeString currentCharIndex:lCurrentCharLocation];
+        NSRange lCloseTagRange = [self endingSpoilerRangeInString:BBCodeString currentCharIndex:lCurrentCharLocation];
         
         
         // Open Tag reached
@@ -645,7 +682,7 @@
             // No other Tag previously opened
             if (lNewOpenedTag <= 1 && lCloseTagRange.location != NSNotFound)
             {
-                return [[_HTMLString substringFromIndex:[kOpeningSpoiler length]] substringToIndex:lCloseTagRange.location - [kOpeningSpoiler length]];
+                return [[_BBCodeString substringFromIndex:_currentCharacterIndex + [kOpeningSpoiler length]] substringToIndex:lCloseTagRange.location - [kOpeningSpoiler length]];
             }
             // Another open tag has been opened
             else
@@ -661,16 +698,16 @@
 }
 
 
-- (NSString*)getQuoteSubstringFromHTMLString:(NSString*)_HTMLString
+- (NSString*)getQuoteSubstringFromBBCodeString:(NSString*)BBCodeString
 {
     int lNewOpenedTag = 0;
     unsigned long lCurrentCharLocation = 0;
     
     
-    while (lCurrentCharLocation < [_HTMLString length])
+    while (lCurrentCharLocation < [BBCodeString length])
     {
-        NSRange lOpenTagRange = [self quoteRangeInString:_HTMLString currentCharIndex:lCurrentCharLocation];
-        NSRange lCloseTagRange = [self endingQuoteRangeInString:_HTMLString currentCharIndex:lCurrentCharLocation];
+        NSRange lOpenTagRange = [self quoteRangeInString:_BBCodeString currentCharIndex:lCurrentCharLocation];
+        NSRange lCloseTagRange = [self endingQuoteRangeInString:_BBCodeString currentCharIndex:lCurrentCharLocation];
         
         
         // Open Tag reached
@@ -686,7 +723,7 @@
             // No other Tag previously opened
             if (lNewOpenedTag <= 1 && lCloseTagRange.location != NSNotFound)
             {
-                return [[_HTMLString substringFromIndex:[kOpeningQuote length]] substringToIndex:lCloseTagRange.location - [kOpeningQuote length]];
+                return [[_BBCodeString substringFromIndex:_currentCharacterIndex + [kOpeningQuote length]] substringToIndex:lCloseTagRange.location - [kOpeningQuote length] - _currentCharacterIndex];
             }
             // Another open tag has been opened
             else
@@ -704,22 +741,22 @@
 
 + (NSArray*)getSubstringForOpeningTag:(NSString*)_Tag
                           toEndingTag:(NSString*)_EndingTag
-                       fromHTMLString:(NSString*)_HTMLString
+                       fromBBCodeString:(NSString*)_BBCodeString
                   currentCharLocation:(unsigned long)_CurrentCharLocation
 {
     int lNewOpenedTag = 0;
     NSRange lOpenTagRange = NSMakeRange(NSNotFound, 0);
     
     
-    while (_CurrentCharLocation < [_HTMLString length])
+    while (_CurrentCharLocation < [_BBCodeString length])
     {
-        NSRange lOpenTagRangeTmp = [_HTMLString rangeOfString:_Tag
+        NSRange lOpenTagRangeTmp = [_BBCodeString rangeOfString:_Tag
                                                       options:NSCaseInsensitiveSearch
-                                                        range:NSMakeRange(_CurrentCharLocation, [_HTMLString length] - _CurrentCharLocation)];
+                                                        range:NSMakeRange(_CurrentCharLocation, [_BBCodeString length] - _CurrentCharLocation)];
         
-        NSRange lCloseTagRange = [_HTMLString rangeOfString:_EndingTag
+        NSRange lCloseTagRange = [_BBCodeString rangeOfString:_EndingTag
                                                     options:NSCaseInsensitiveSearch
-                                                      range:NSMakeRange(_CurrentCharLocation, [_HTMLString length] - _CurrentCharLocation)];
+                                                      range:NSMakeRange(_CurrentCharLocation, [_BBCodeString length] - _CurrentCharLocation)];
         
         // Open Tag reached
         if (lOpenTagRangeTmp.location != NSNotFound && lCloseTagRange.location != NSNotFound && lOpenTagRangeTmp.location < lCloseTagRange.location)
@@ -739,7 +776,7 @@
             // No other Tag previously opened
             if (lNewOpenedTag <= 1 && lCloseTagRange.location != NSNotFound && lOpenTagRange.location != NSNotFound)
             {
-                NSString* lSubString = [[_HTMLString substringFromIndex:lOpenTagRange.location + lOpenTagRange.length] substringToIndex:lCloseTagRange.location - lOpenTagRange.location - lOpenTagRange.length];
+                NSString* lSubString = [[_BBCodeString substringFromIndex:lOpenTagRange.location + lOpenTagRange.length] substringToIndex:lCloseTagRange.location - lOpenTagRange.location - lOpenTagRange.length];
                 
                 
                 NSValue* lRangeValue = [NSValue valueWithRange:NSMakeRange(lOpenTagRange.location + lOpenTagRange.length, lCloseTagRange.location - lOpenTagRange.location - lOpenTagRange.length)];
@@ -765,7 +802,7 @@
 
 + (NSMutableDictionary*)getSubstringForLinkOpeningTag:(NSString*)_Tag
                                           toEndingTag:(NSString*)_EndingTag
-                                       fromHTMLString:(NSString*)_HTMLString
+                                       fromBBCodeString:(NSString*)_BBCodeString
                                   currentCharLocation:(unsigned long)_CurrentCharLocation
 {
     int lNewOpenedTag = 0;
@@ -776,16 +813,16 @@
     NSRange lURLRange = NSMakeRange(NSNotFound, 0);
     
     
-    while (_CurrentCharLocation < [_HTMLString length])
+    while (_CurrentCharLocation < [_BBCodeString length])
     {
-        NSRange lOpenTagRangeTmp = [_HTMLString rangeOfString:_Tag
+        NSRange lOpenTagRangeTmp = [_BBCodeString rangeOfString:_Tag
                                                       options:NSCaseInsensitiveSearch
-                                                        range:NSMakeRange(_CurrentCharLocation, [_HTMLString length] - _CurrentCharLocation)];
+                                                        range:NSMakeRange(_CurrentCharLocation, [_BBCodeString length] - _CurrentCharLocation)];
         
         
-        NSRange lCloseTagRange = [_HTMLString rangeOfString:_EndingTag
+        NSRange lCloseTagRange = [_BBCodeString rangeOfString:_EndingTag
                                                     options:NSCaseInsensitiveSearch
-                                                      range:NSMakeRange(_CurrentCharLocation, [_HTMLString length] - _CurrentCharLocation)];
+                                                      range:NSMakeRange(_CurrentCharLocation, [_BBCodeString length] - _CurrentCharLocation)];
         
         
         // Open Tag reached
@@ -795,13 +832,13 @@
             {
                 lOpenTagRange = lOpenTagRangeTmp;
                 
-                lURLRange = [_HTMLString rangeOfString:@"]"
+                lURLRange = [_BBCodeString rangeOfString:@"]"
                                                options:NSCaseInsensitiveSearch
-                                                 range:NSMakeRange(lOpenTagRangeTmp.location + lOpenTagRangeTmp.length, [_HTMLString length] - lOpenTagRangeTmp.location - lOpenTagRangeTmp.length)];
+                                                 range:NSMakeRange(lOpenTagRangeTmp.location + lOpenTagRangeTmp.length, [_BBCodeString length] - lOpenTagRangeTmp.location - lOpenTagRangeTmp.length)];
                 
-                if ([_HTMLString length] > lOpenTagRangeTmp.location + lOpenTagRangeTmp.length + lURLRange.location - lOpenTagRangeTmp.location - lOpenTagRangeTmp.length)
+                if ([_BBCodeString length] > lOpenTagRangeTmp.location + lOpenTagRangeTmp.length + lURLRange.location - lOpenTagRangeTmp.location - lOpenTagRangeTmp.length)
                 {
-                    lLink = [_HTMLString substringWithRange:NSMakeRange(lOpenTagRangeTmp.location + lOpenTagRangeTmp.length, lURLRange.location - lOpenTagRangeTmp.location - lOpenTagRangeTmp.length)];
+                    lLink = [_BBCodeString substringWithRange:NSMakeRange(lOpenTagRangeTmp.location + lOpenTagRangeTmp.length, lURLRange.location - lOpenTagRangeTmp.location - lOpenTagRangeTmp.length)];
                 }
                 
                 
@@ -813,14 +850,14 @@
                 {
                     lOpenTagRange = NSMakeRange(lOpenTagRangeTmp.location + lOpenTagRangeTmp.length + lBuggedOpenTagRange.location, lBuggedOpenTagRange.length);
                     
-                    lURLRange = [_HTMLString rangeOfString:@"]"
+                    lURLRange = [_BBCodeString rangeOfString:@"]"
                                                    options:NSCaseInsensitiveSearch
-                                                     range:NSMakeRange(lOpenTagRange.location, [_HTMLString length] - lOpenTagRange.location - lOpenTagRange.length)];
+                                                     range:NSMakeRange(lOpenTagRange.location, [_BBCodeString length] - lOpenTagRange.location - lOpenTagRange.length)];
                
                     
-                    if ([_HTMLString length] > lOpenTagRange.location + lOpenTagRange.length + lURLRange.location - lOpenTagRange.location - lOpenTagRange.length)
+                    if ([_BBCodeString length] > lOpenTagRange.location + lOpenTagRange.length + lURLRange.location - lOpenTagRange.location - lOpenTagRange.length)
                     {
-                        lLink = [_HTMLString substringWithRange:NSMakeRange(lOpenTagRange.location + lOpenTagRange.length, lURLRange.location - lOpenTagRange.location - lOpenTagRange.length)];
+                        lLink = [_BBCodeString substringWithRange:NSMakeRange(lOpenTagRange.location + lOpenTagRange.length, lURLRange.location - lOpenTagRange.location - lOpenTagRange.length)];
                     }
                     
                     lNewOpenedTag++;
@@ -843,13 +880,13 @@
             {
                 NSRange lDisplayedStringRange = NSMakeRange(lURLRange.location + lURLRange.length, lCloseTagRange.location - lURLRange.location - lURLRange.length);
                 
-                if ([_HTMLString length] > lDisplayedStringRange.location && lDisplayedStringRange.length != FLT_MAX)
+                if ([_BBCodeString length] > lDisplayedStringRange.location && lDisplayedStringRange.length != FLT_MAX)
                 {
-                    NSString* lSubStr = [_HTMLString substringFromIndex:lDisplayedStringRange.location];
+                    NSString* lSubStr = [_BBCodeString substringFromIndex:lDisplayedStringRange.location];
                     
                     if ([lSubStr length] > lDisplayedStringRange.length)
                     {
-                        NSString* lSubString = [[_HTMLString substringFromIndex:lDisplayedStringRange.location] substringToIndex:lDisplayedStringRange.length];
+                        NSString* lSubString = [[_BBCodeString substringFromIndex:lDisplayedStringRange.location] substringToIndex:lDisplayedStringRange.length];
                         
                         NSValue* lRangeValue = [NSValue valueWithRange:lDisplayedStringRange];
                         NSValue* lbbcodeTotalRange = [NSValue valueWithRange:NSMakeRange(lOpenTagRange.location, lCloseTagRange.location + lCloseTagRange.length - lOpenTagRange.location)];
@@ -895,7 +932,7 @@
 
 - (void)updateSize:(float)_AdjustVal forSubView:(UIView*)_SubView
 {
-    self.mCurrentHeight += _AdjustVal;
+    self.currentHeight += _AdjustVal;
     
     for (UIView* aView in self.subviews)
     {
@@ -924,15 +961,15 @@
                             self.frame.size.height + _AdjustVal);
     
     
-    if (self.mParent)
+    if (self.parent)
     {
-        [self.mParent updateSize:_AdjustVal forSubView:self];
+        [self.parent updateSize:_AdjustVal forSubView:self];
     }
     else
     {
-        if (mSpoilerDelegate && [mSpoilerDelegate respondsToSelector:@selector(BBCodeSpoilerPressed:)])
+        if (spoilerDelegate && [spoilerDelegate respondsToSelector:@selector(BBCodeDisplayerSpoilerPressed:)])
         {
-            [mSpoilerDelegate BBCodeSpoilerPressed:self];
+            [spoilerDelegate BBCodeDisplayerSpoilerPressed:self];
         }
     }
 }
@@ -941,11 +978,11 @@
 + (float)calculateBBCodeHeightForBBCodeText:(NSString*)_BBCodeText maxWidth:(float)_MaxWidth
 {
     BBCodeDisplayer* lBBCodeDisplay = [[BBCodeDisplayer alloc] init];
-    [lBBCodeDisplay setupWithHTMLString:_BBCodeText
+    [lBBCodeDisplay setupWithBBCodeString:_BBCodeText
                                   width:_MaxWidth
                                delegate:nil
                         spoilerDelegate:nil];
-    return lBBCodeDisplay.mCurrentHeight;
+    return lBBCodeDisplay.currentHeight;
 }
 
 
@@ -957,25 +994,25 @@
 
 - (IBAction)onSpoilerButtonPressed
 {
-    self.mIsSpoilerClosed = !self.mIsSpoilerClosed;
+    self.isSpoilerClosed = !self.isSpoilerClosed;
     
-    if (!self.mIsSpoilerClosed)
+    if (!self.isSpoilerClosed)
     {
         self.frame = CGRectMake(self.frame.origin.x,
                                 self.frame.origin.y,
                                 self.frame.size.width,
-                                self.mCurrentHeight);
+                                self.currentHeight);
         
-        [self.mParent updateSize:self.mCurrentHeight - 25 forSubView:self];
+        [self.parent updateSize:self.currentHeight - kSpoilerClosedHeight forSubView:self];
     }
     else
     {
         self.frame = CGRectMake(self.frame.origin.x,
                                 self.frame.origin.y,
                                 self.frame.size.width,
-                                25);
+                                kSpoilerClosedHeight);
         
-        [self.mParent updateSize:- (self.mCurrentHeight - 25) forSubView:self];
+        [self.parent updateSize:- (self.currentHeight - kSpoilerClosedHeight) forSubView:self];
     }
 }
 
@@ -984,13 +1021,14 @@
 {
     if(_Gesture.state == UIGestureRecognizerStateBegan)
     {
-        if (self.mParent)
+        if (self.parent)
         {
-            [self.mParent didLongPress:_Gesture];
+            [self.parent didLongPress:_Gesture];
         }
-        else if ([self.mSpoilerDelegate respondsToSelector:@selector(didLongPress:)])
+        
+        else if ([self.spoilerDelegate respondsToSelector:@selector(BBCodeDisplayer:didLongPress:)])
         {
-            [self.mSpoilerDelegate didLongPress:_Gesture];
+            [self.spoilerDelegate BBCodeDisplayer:self didLongPress:_Gesture];
         }
     }
 }
@@ -1004,13 +1042,13 @@
 
 - (BOOL)textView:(UITextView *)textView shouldInteractWithTextAttachment:(NSTextAttachment *)textAttachment inRange:(NSRange)characterRange
 {
-    if (self.mParent)
+    if (self.parent)
     {
-        return [self.mParent textView:textView shouldInteractWithTextAttachment:textAttachment inRange:characterRange];
+        return [self.parent textView:textView shouldInteractWithTextAttachment:textAttachment inRange:characterRange];
     }
-    else if ([self.mDelegate respondsToSelector:@selector(textView:shouldInteractWithTextAttachment:inRange:)])
+    else if ([self.delegate respondsToSelector:@selector(textView:shouldInteractWithTextAttachment:inRange:)])
     {
-        return [self.mDelegate textView:textView shouldInteractWithTextAttachment:textAttachment inRange:characterRange];
+        return [self.delegate textView:textView shouldInteractWithTextAttachment:textAttachment inRange:characterRange];
     }
     
     return NO;
@@ -1019,13 +1057,13 @@
 
 - (BOOL)textView:(UITextView *)textView shouldInteractWithURL:(NSURL *)URL inRange:(NSRange)characterRange
 {
-    if (self.mParent)
+    if (self.parent)
     {
-        return [self.mParent textView:textView shouldInteractWithURL:URL inRange:characterRange];
+        return [self.parent textView:textView shouldInteractWithURL:URL inRange:characterRange];
     }
-    else if ([self.mDelegate respondsToSelector:@selector(textView:shouldInteractWithURL:inRange:)])
+    else if ([self.delegate respondsToSelector:@selector(textView:shouldInteractWithURL:inRange:)])
     {
-        return [self.mDelegate textView:textView shouldInteractWithURL:URL inRange:characterRange];
+        return [self.delegate textView:textView shouldInteractWithURL:URL inRange:characterRange];
     }
     
     return NO;

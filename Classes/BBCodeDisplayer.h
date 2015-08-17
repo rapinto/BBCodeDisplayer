@@ -1,10 +1,31 @@
 //
 //  BBCodeDisplayer.h
-//  Dealabs
+//
 //
 //  Created by Raphaël Pinto on 04/09/2014.
-//  Copyright (c) 2014 HUME Network. All rights reserved.
 //
+// The MIT License (MIT)
+// Copyright (c) 2015 Raphael Pinto.
+//
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+//
+// The above copyright notice and this permission notice shall be included in
+// all copies or substantial portions of the Software.
+//
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+// THE SOFTWARE.
+
+
 
 #import <UIKit/UIKit.h>
 #import "SpoilerDelegate.h"
@@ -16,35 +37,34 @@
 
 
 
-@property (nonatomic, retain) NSString* mHTMLString;
-@property (nonatomic) float mCurrentHeight;
-@property (nonatomic) NSUInteger mCurrentCharacterIndex;
-@property (nonatomic, assign) NSObject<UITextViewDelegate>* mDelegate;
-@property (nonatomic) BOOL mIsSpoilerClosed;
-@property (nonatomic) BOOL mHasAlreadyLoaded;
-@property (nonatomic, retain) BBCodeDisplayer* mParent;
-@property (nonatomic, assign) NSObject<SpoilerDelegate>* mSpoilerDelegate;
-@property (nonatomic, retain) UILongPressGestureRecognizer* mLongPress;
-@property (nonatomic, retain) UITapGestureRecognizer* mTapGesture;
-@property (nonatomic) BOOL mIsQuote;
-@property (nonatomic) BOOL mIsSpoiler;
-@property (nonatomic, retain) UIColor* mTextColor;
-@property (nonatomic, retain) UIColor* mLinkColor;
+@property (nonatomic, assign) NSObject<UITextViewDelegate>* delegate;
+@property (nonatomic, assign) NSObject<SpoilerDelegate>* spoilerDelegate;
+@property (nonatomic, retain) NSString* BBCodeString;
+@property (nonatomic, retain) BBCodeDisplayer* parent;
+@property (nonatomic, retain) UILongPressGestureRecognizer* longPress;
+@property (nonatomic, retain) UITapGestureRecognizer* tapGesture;
+@property (nonatomic, retain) UIColor* textColor;
+@property (nonatomic, retain) UIColor* linkColor;
+@property (nonatomic) NSUInteger currentCharacterIndex;
+@property (nonatomic) float currentHeight;
+@property (nonatomic) BOOL isSpoilerClosed;
+@property (nonatomic) BOOL hasAlreadyLoaded;
+@property (nonatomic) BOOL isQuote;
+@property (nonatomic) BOOL isSpoiler;
 
 
++ (NSMutableAttributedString*)attributtedStringFromBBCode:(NSString*)BBCodeString replaceSmiley:(BOOL)replaceSmiley;
++ (void)replaceSmileyWithString:(NSString*)smileyString
+                    smileyImage:(NSString*)smileyImage
+                inMutableString:(NSMutableAttributedString*)mutableString;
++ (float)calculateBBCodeHeightForBBCodeText:(NSString*)BBCodeText
+                                   maxWidth:(float)maxWidth;
 
-- (void)setupWithHTMLString:(NSString*)_HTML
-                      width:(float)_Width
-                   delegate:(NSObject<UITextViewDelegate>*)_Delegate
-            spoilerDelegate:(NSObject<SpoilerDelegate>*)_SpoilerDelegate;
 
-
-
-+ (NSMutableAttributedString*)attributtedStringFromBBCode:(NSString*)_BBCodeString replaceSmiley:(BOOL)_ReplaceSmiley;
-+ (void)replaceSmileyWithString:(NSString*)_SmileyString
-                    smileyImage:(NSString*)_SmileyImage
-                inMutableString:(NSMutableAttributedString*)_MutableString;
-+ (float)calculateBBCodeHeightForBBCodeText:(NSString*)_BBCodeText maxWidth:(float)_MaxWidth;
+- (void)setupWithBBCodeString:(NSString*)BBCode
+                        width:(float)width
+                     delegate:(NSObject<UITextViewDelegate>*)delegateObj
+              spoilerDelegate:(NSObject<SpoilerDelegate>*)spoilerDelegate;
 
 
 
