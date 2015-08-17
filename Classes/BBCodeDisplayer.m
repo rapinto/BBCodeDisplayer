@@ -114,11 +114,8 @@
     self.currentHeight = startingCurrentHeight;
     self.currentCharacterIndex = 0;
     
-    
-    NSLog(@"setupWithBBCodeString BBCode %@", BBCode);
     while (self.currentCharacterIndex < [BBCode length])
     {
-        NSLog(@"==================================================");
         BOOL lNextTagIsQuote = YES;
         NSRange lNextOpenedTagRange = NSMakeRange(NSNotFound, 0);
         
@@ -136,8 +133,7 @@
             lNextTagIsQuote = NO;
             lNextOpenedTagRange = lOpeningSpoilerRange;
         }
-        
-        //NSLog(@"self.currentCharacterIndex 1 %lu", (unsigned long)self.currentCharacterIndex);
+    
         NSString* lText = nil;
         if ([self.BBCodeString length] >= self.currentCharacterIndex)
         {
@@ -150,9 +146,6 @@
                 lText = [self.BBCodeString substringFromIndex:self.currentCharacterIndex];
             }
         }
-        
-        
-        //NSLog(@"self.currentCharacterIndex 2 %lu", (unsigned long)self.currentCharacterIndex);
         
         if (lNextOpenedTagRange.location != NSNotFound)
         {
@@ -168,10 +161,6 @@
             [self addTextViewWithString:lText width:width];
         }
         
-        
-       // NSLog(@"self.BBCodeString %lu", (unsigned long)[self.BBCodeString length]);
-       // NSLog(@"self.currentCharacterIndex 3 %lu", (unsigned long)self.currentCharacterIndex);
-        
         if (lNextTagIsQuote && lOpeningQuoteRange.location != NSNotFound)
         {
             NSString* lText = [self.BBCodeString substringFromIndex:self.currentCharacterIndex];
@@ -180,12 +169,10 @@
         }
         else if (lOpeningSpoilerRange.location != NSNotFound)
         {
-            NSLog(@"new loop 1 %@", [BBCode substringFromIndex:self.currentCharacterIndex]);
             NSString* lText = [self.BBCodeString substringFromIndex:self.currentCharacterIndex];
             
             [self addSpoilerWithString:lText width:width];
         }
-        NSLog(@"new loop 2 %@", [BBCode substringFromIndex:self.currentCharacterIndex]);
     }
     
     self.frame = CGRectMake(self.frame.origin.x,
@@ -452,7 +439,7 @@
 {
     NSString* lRegExOpenningTag = [openingTag stringByReplacingOccurrencesOfString:@"[" withString:@"\\["];
     lRegExOpenningTag = [lRegExOpenningTag stringByReplacingOccurrencesOfString:@"]" withString:@"\\]"];
-    int lRemovedCharacters = 0;
+    NSUInteger lRemovedCharacters = 0;
     
     NSString* lRegExClosingTag = [closingTag stringByReplacingOccurrencesOfString:@"[" withString:@"\\["];
     lRegExClosingTag = [lRegExClosingTag stringByReplacingOccurrencesOfString:@"]" withString:@"\\]"];
@@ -480,7 +467,7 @@
 {
     NSRegularExpression* lRegex = [NSRegularExpression regularExpressionWithPattern:@"\\[url=(.*)\\](.*)\\[\\/url\\]" options:0 error:NULL];
     NSArray* lMatches = [lRegex matchesInString:attributedString.string options:0 range:NSMakeRange(0, [attributedString.string length])];
-    int lRemovedCharacters = 0;
+    NSUInteger lRemovedCharacters = 0;
     
     for (NSTextCheckingResult* aTextCheckingResult in lMatches)
     {
@@ -514,7 +501,7 @@
 {
     NSRegularExpression* lRegex = [NSRegularExpression regularExpressionWithPattern:@"\\[img\\]([A-Za-z0-9_.-~]{1,})\\[\\/img\\]" options:0 error:NULL];
     NSArray* lMatches = [lRegex matchesInString:attributedString.string options:0 range:NSMakeRange(0, [attributedString.string length])];
-    int lRemovedCharacters = 0;
+    NSUInteger lRemovedCharacters = 0;
     
     
     for (NSTextCheckingResult* aTextCheckingResult in lMatches)
@@ -532,7 +519,7 @@
 + (NSMutableAttributedString*)attributtedStringFromBBCode:(NSString*)BBCodeString replaceSmiley:(BOOL)replaceSmiley
 {
     NSString* lTrimmedString = [BBCodeString stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceAndNewlineCharacterSet]];
-    NSMutableAttributedString* AttributedString = [[NSMutableAttributedString alloc] initWithString:BBCodeString];
+    NSMutableAttributedString* AttributedString = [[NSMutableAttributedString alloc] initWithString:lTrimmedString];
    
     
     [self replaceBBCodeOpeningTag:@"[s]"

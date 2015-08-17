@@ -1,6 +1,6 @@
-MagicV2ViewController
+BBCodeDisplayer
 
-Version 1.0.2, July 24th, 2015
+Version 1.0.1, July 24th, 2015
 
 Copyright (C) 2015 Raphaël Pinto
 
