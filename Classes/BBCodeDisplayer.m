@@ -446,9 +446,8 @@
     lRegExClosingTag = [lRegExClosingTag stringByReplacingOccurrencesOfString:@"/" withString:@"\\/"];
     
     
-    NSRegularExpression* lRegex = [NSRegularExpression regularExpressionWithPattern:[NSString stringWithFormat:@"%@(.*)%@", lRegExOpenningTag, lRegExClosingTag]options:0 error:NULL];
+    NSRegularExpression* lRegex = [NSRegularExpression regularExpressionWithPattern:[NSString stringWithFormat:@"%@((.|\\s)*?)%@", lRegExOpenningTag, lRegExClosingTag]options:0 error:NULL];
     NSArray* lMatches = [lRegex matchesInString:attributedString.string options:0 range:NSMakeRange(0, [attributedString.string length])];
-    
     
     for (NSTextCheckingResult* aTextCheckingResult in lMatches)
     {
@@ -522,23 +521,23 @@
     NSMutableAttributedString* AttributedString = [[NSMutableAttributedString alloc] initWithString:lTrimmedString];
    
     
-    [self replaceBBCodeOpeningTag:@"[s]"
+   [self replaceBBCodeOpeningTag:@"[s]"
                        closingTag:@"[/s]"
                  attributedString:AttributedString
                         attribute:NSStrikethroughStyleAttributeName
                             value:[NSNumber numberWithInt:1]];
+        
+    [self replaceBBCodeOpeningTag:@"[i]"
+                       closingTag:@"[/i]"
+                 attributedString:AttributedString
+                        attribute:NSFontAttributeName
+                            value:[UIFont fontWithName:@"HelveticaNeue-Italic" size:13]];
     
     [self replaceBBCodeOpeningTag:@"[b]"
                        closingTag:@"[/b]"
                  attributedString:AttributedString
                         attribute:NSFontAttributeName
                             value:[UIFont fontWithName:@"Helvetica-Bold" size:12]];
-    
-    [self replaceBBCodeOpeningTag:@"[i]"
-                       closingTag:@"[/i]"
-                 attributedString:AttributedString
-                        attribute:NSFontAttributeName
-                            value:[UIFont fontWithName:@"HelveticaNeue-Italic" size:13]];
     
     [self replaceBBCodeOpeningTag:@"[u]"
                        closingTag:@"[/u]"
@@ -646,6 +645,58 @@
 
 - (NSString*)getSpoilerSubstringFromBBCodeString:(NSString*)BBCodeString
 {
+    
+    NSRange lFirstOpenTagRange = [self spoilerRangeInString:_BBCodeString currentCharIndex:0];
+    
+    if (lFirstOpenTagRange.location == NSNotFound)
+    {
+        return nil;
+    }
+    
+    unsigned long lCurrentCharLocation = lFirstOpenTagRange.location + lFirstOpenTagRange.length;
+    int lNewOpenedTag = 0;
+    
+    do
+    {
+        NSRange lCloseTagRange = [self endingSpoilerRangeInString:_BBCodeString currentCharIndex:lCurrentCharLocation];
+        
+        if (lCloseTagRange.location == NSNotFound)
+        {
+            return nil;
+        }
+        
+        
+        NSRange lOpenTagRange = [self spoilerRangeInString:_BBCodeString currentCharIndex:lCurrentCharLocation];
+        
+        
+        if (lOpenTagRange.location != NSNotFound && lOpenTagRange.location < lCloseTagRange.location)
+        {
+            lNewOpenedTag++;
+            lCurrentCharLocation = lOpenTagRange.location + lOpenTagRange.length;
+            
+            continue;
+        }
+        else
+        {
+            if (lNewOpenedTag == 0)
+            {
+                return [_BBCodeString substringWithRange:NSMakeRange(lFirstOpenTagRange.location + [kOpeningSpoiler length], lCloseTagRange.location - lFirstOpenTagRange.location - [kOpeningSpoiler length])];
+            }
+            else
+            {
+                lNewOpenedTag--;
+                
+                lCurrentCharLocation = lCloseTagRange.location + lCloseTagRange.length;
+                
+                continue;
+            }
+        }
+    }
+    while (lNewOpenedTag >= 0);
+    
+    return nil;
+    
+    /*
     int lNewOpenedTag = 0;
     unsigned long lCurrentCharLocation = 0;
     
@@ -681,46 +732,59 @@
         }
     }
     
-    return nil;
+    return nil;*/
 }
 
 
 - (NSString*)getQuoteSubstringFromBBCodeString:(NSString*)BBCodeString
 {
-    int lNewOpenedTag = 0;
-    unsigned long lCurrentCharLocation = 0;
+    NSRange lFirstOpenTagRange = [self quoteRangeInString:_BBCodeString currentCharIndex:0];
     
-    
-    while (lCurrentCharLocation < [BBCodeString length])
+    if (lFirstOpenTagRange.location == NSNotFound)
     {
-        NSRange lOpenTagRange = [self quoteRangeInString:_BBCodeString currentCharIndex:lCurrentCharLocation];
+        return nil;
+    }
+    
+    unsigned long lCurrentCharLocation = lFirstOpenTagRange.location + lFirstOpenTagRange.length;
+    int lNewOpenedTag = 0;
+    
+    do
+    {
         NSRange lCloseTagRange = [self endingQuoteRangeInString:_BBCodeString currentCharIndex:lCurrentCharLocation];
         
+        if (lCloseTagRange.location == NSNotFound)
+        {
+            return nil;
+        }
         
-        // Open Tag reached
-        if (lOpenTagRange.location < lCloseTagRange.location)
+        
+        NSRange lOpenTagRange = [self quoteRangeInString:_BBCodeString currentCharIndex:lCurrentCharLocation];
+        
+        
+        if (lOpenTagRange.location != NSNotFound && lOpenTagRange.location < lCloseTagRange.location)
         {
             lNewOpenedTag++;
-            
             lCurrentCharLocation = lOpenTagRange.location + lOpenTagRange.length;
+            
+            continue;
         }
-        // Close Tag reached
         else
         {
-            // No other Tag previously opened
-            if (lNewOpenedTag <= 1 && lCloseTagRange.location != NSNotFound)
+            if (lNewOpenedTag == 0)
             {
-                return [[_BBCodeString substringFromIndex:_currentCharacterIndex + [kOpeningQuote length]] substringToIndex:lCloseTagRange.location - [kOpeningQuote length] - _currentCharacterIndex];
+                return [_BBCodeString substringWithRange:NSMakeRange(lFirstOpenTagRange.location + [kOpeningQuote length], lCloseTagRange.location - lFirstOpenTagRange.location - [kOpeningQuote length])];
             }
-            // Another open tag has been opened
             else
             {
                 lNewOpenedTag--;
                 
                 lCurrentCharLocation = lCloseTagRange.location + lCloseTagRange.length;
+                
+                continue;
             }
         }
     }
+    while (lNewOpenedTag >= 0);
     
     return nil;
 }
