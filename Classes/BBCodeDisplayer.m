@@ -104,7 +104,6 @@
                      delegate:(NSObject<UITextViewDelegate>*)delegateObj
               spoilerDelegate:(NSObject<SpoilerDelegate>*)spoilerDelegateObj
 {
-    NSLog(@"setupWithBBCodeString %@", BBCode);
     for (UIView* aView in self.subviews)
     {
         [aView removeFromSuperview];
@@ -180,8 +179,6 @@
                             self.frame.origin.y,
                             self.frame.size.width,
                             self.currentHeight + startingCurrentHeight);
-    
-    NSLog(@"END");
 }
 
 
@@ -191,17 +188,16 @@
             spoilerDelegate:(NSObject<SpoilerDelegate>*)spoilerDelegateObj
 {
     [self setupWithBBCodeString:BBCode
-                        width:width
-                currentHeight:5
-                     delegate:delegateObj
-              spoilerDelegate:spoilerDelegateObj];
+                          width:width
+                  currentHeight:5
+                       delegate:delegateObj
+                spoilerDelegate:spoilerDelegateObj];
 }
 
 
 - (void)addTextViewWithString:(NSString*)BBCodeString
                         width:(float)width
 {
-    NSLog(@"addTextViewWithString %@", BBCodeString);
     NSMutableAttributedString* lAttributedString = [BBCodeDisplayer attributtedStringFromBBCode:BBCodeString replaceSmiley:YES];
 
     if ([lAttributedString length] == 0)
@@ -209,7 +205,6 @@
         self.currentCharacterIndex += [BBCodeString length];
         return;
     }
-    NSLog(@"0");
     
     CustomUITextView* lTextView = [[CustomUITextView alloc] initWithFrame:CGRectMake(5,
                                                                          _currentHeight,
@@ -228,7 +223,6 @@
         lTextView.textColor = [UIColor blackColor];
     }
     
-    NSLog(@"1");
     lTextView.editable = NO;
     lTextView.contentInset = UIEdgeInsetsZero;
     lTextView.textContainer.lineFragmentPadding = 0;
@@ -239,14 +233,11 @@
     lTextView.clipsToBounds = YES;
     lTextView.scrollEnabled = NO;
     
-    NSLog(@"self.linkColor  %@", self.linkColor );
     [lTextView setLinkTextAttributes:[NSDictionary dictionaryWithObject:self.linkColor forKey:NSForegroundColorAttributeName]];
     
     
     lTextView.delegate = self;
     [lTextView addGestureRecognizer:self.longPress];
-    
-    NSLog(@"2");
     
     CGSize size = [lTextView sizeThatFits:CGSizeMake(lTextView.frame.size.width, FLT_MAX)];
     lTextView.frame = CGRectMake(5,
@@ -261,7 +252,6 @@
     
     self.currentHeight += size.height;
     self.currentCharacterIndex += [BBCodeString length];
-    NSLog(@"fin");
 }
 
 
@@ -478,17 +468,13 @@
     
     for (NSTextCheckingResult* aTextCheckingResult in lMatches)
     {
-        NSLog(@"------------------------------------");
         NSString* lSubString = [attributedString.string substringWithRange:NSMakeRange([aTextCheckingResult range].location - lRemovedCharacters, [aTextCheckingResult range].length)];
 
-        NSLog(@"|%@|", lSubString);
         // Extract the full url
         NSRegularExpression* lRegexURL = [NSRegularExpression regularExpressionWithPattern:@"\\[url=(.*?)\\]" options:0 error:NULL];
         NSTextCheckingResult* lMatch2 = [lRegexURL firstMatchInString:lSubString options:0 range:NSMakeRange(0, [lSubString length])];
         NSRange lURLRange = NSMakeRange([lMatch2 range].location + 5, [lMatch2 range].length - ([lMatch2 range].location + 6)); // 6 is the [url=] lenght; 5 is the [url= lenght
         NSString* lURL = [lSubString substringWithRange:lURLRange];
-        
-        NSLog(@"lURL %@", [lSubString substringWithRange:[lMatch2 range]]);
         
         // Extract the visible URL
         NSRange lVisibleURLRange = NSMakeRange([aTextCheckingResult range].location + [lMatch2 range].length - lRemovedCharacters, [aTextCheckingResult range].length - ([lMatch2 range].length + 6)); // 6 is the lenght of [/url]

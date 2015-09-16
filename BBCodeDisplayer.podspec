@@ -16,7 +16,7 @@ Pod::Spec.new do |s|
   #
 
   s.name         = "BBCodeDisplayer"
-  s.version      = "1.0.4"
+  s.version      = "1.0.5"
   s.summary      = "custom view used to display bbcode (with quote and spoiler)"
 
   s.description  = <<-DESC
@@ -79,7 +79,7 @@ Pod::Spec.new do |s|
   #  Supports git, hg, bzr, svn and HTTP.
   #
 
-  s.source       = { :git => "https://github.com/rapinto/BBCodeDisplayer.git", :tag => "1.0.4" }
+  s.source       = { :git => "https://github.com/rapinto/BBCodeDisplayer.git", :tag => s.version }
 
 
   # ――― Source Code ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――― #
