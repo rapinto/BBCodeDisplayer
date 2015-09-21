@@ -462,7 +462,7 @@
 
 + (void)replaceBBCodeLinkWithAttributedString:(NSMutableAttributedString*)attributedString
 {
-    NSRegularExpression* lRegex = [NSRegularExpression regularExpressionWithPattern:@"\\[url=(.*)\\](.*)\\[\\/url\\]" options:0 error:NULL];
+    NSRegularExpression* lRegex = [NSRegularExpression regularExpressionWithPattern:@"\\[url=(.*?)\\](.*?)\\[\\/url\\]" options:0 error:NULL];
     NSArray* lMatches = [lRegex matchesInString:attributedString.string options:0 range:NSMakeRange(0, [attributedString.string length])];
     NSUInteger lRemovedCharacters = 0;
     

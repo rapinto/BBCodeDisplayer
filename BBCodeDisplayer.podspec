@@ -16,7 +16,7 @@ Pod::Spec.new do |s|
   #
 
   s.name         = "BBCodeDisplayer"
-  s.version      = "1.0.5"
+  s.version      = "1.0.6"
   s.summary      = "custom view used to display bbcode (with quote and spoiler)"
 
   s.description  = <<-DESC
