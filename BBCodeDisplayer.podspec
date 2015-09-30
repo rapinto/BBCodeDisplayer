@@ -16,7 +16,7 @@ Pod::Spec.new do |s|
   #
 
   s.name         = "BBCodeDisplayer"
-  s.version      = "1.0.6"
+  s.version      = "1.0.7"
   s.summary      = "custom view used to display bbcode (with quote and spoiler)"
 
   s.description  = <<-DESC
@@ -65,12 +65,11 @@ Pod::Spec.new do |s|
   #
 
   # s.platform     = :ios
-  s.platform     = :ios, "7.0"
+    s.ios.deployment_target = "7.0"
+    s.watchos.deployment_target = "2.0"
 
   #  When using multiple platforms
-  # s.ios.deployment_target = "5.0"
   # s.osx.deployment_target = "10.7"
-  # s.watchos.deployment_target = "2.0"
 
 
   # ――― Source Location ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――― #
@@ -117,7 +116,10 @@ Pod::Spec.new do |s|
   #
 
   # s.framework  = "SomeFramework"
-  s.frameworks = "UIKit"
+    s.watchos.frameworks = 'UIKit'
+    s.ios.frameworks = 'UIKit'
+
+
 
   # s.library   = "iconv"
   # s.libraries = "iconv", "xml2"
@@ -132,6 +134,7 @@ Pod::Spec.new do |s|
   # s.requires_arc = true
 
   # s.xcconfig = { "HEADER_SEARCH_PATHS" => "$(SDKROOT)/usr/include/libxml2" }
-  s.dependency 'Utils', '~> 1.0.0'
+    s.watchos.dependency 'Utils', '~> 1.0.2'
+    s.ios.dependency 'Utils', '~> 1.0.2'
 
 end
