@@ -1,6 +1,6 @@
 BBCodeDisplayer
 
-Version 1.0.8, July 24th, 2015
+Version 1.0.9, July 24th, 2015
 
 Copyright (C) 2015 Raphaël Pinto
 
