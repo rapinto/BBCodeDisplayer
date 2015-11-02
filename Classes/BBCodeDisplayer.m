@@ -444,7 +444,7 @@
     lRegExClosingTag = [lRegExClosingTag stringByReplacingOccurrencesOfString:@"/" withString:@"\\/"];
     
     
-    NSRegularExpression* lRegex = [NSRegularExpression regularExpressionWithPattern:[NSString stringWithFormat:@"%@((.|\\s)*?)%@", lRegExOpenningTag, lRegExClosingTag]options:0 error:NULL];
+    NSRegularExpression* lRegex = [NSRegularExpression regularExpressionWithPattern:[NSString stringWithFormat:@"%@((.|\\n)*?)%@", lRegExOpenningTag, lRegExClosingTag]options:0 error:NULL];
     NSArray* lMatches = [lRegex matchesInString:attributedString.string options:0 range:NSMakeRange(0, [attributedString.string length])];
     
     for (NSTextCheckingResult* aTextCheckingResult in lMatches)
