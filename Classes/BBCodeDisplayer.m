@@ -126,14 +126,18 @@
         {
             lNextOpenedTagRange = lOpeningQuoteRange;
         }
-       
+        
+        
         NSRange lOpeningSpoilerRange = [self spoilerRangeInString:self.BBCodeString currentCharIndex:self.currentCharacterIndex];
+        
+        
         if ((lOpeningSpoilerRange.location != NSNotFound) && (lOpeningQuoteRange.location == NSNotFound || lOpeningSpoilerRange.location < lOpeningQuoteRange.location))
         {
             lNextTagIsQuote = NO;
             lNextOpenedTagRange = lOpeningSpoilerRange;
         }
-    
+        
+        
         NSString* lText = nil;
         if ([self.BBCodeString length] >= self.currentCharacterIndex)
         {
@@ -147,6 +151,7 @@
             }
         }
         
+        
         if (lNextOpenedTagRange.location != NSNotFound)
         {
             NSRange lSubRange = NSMakeRange(self.currentCharacterIndex, lNextOpenedTagRange.location - self.currentCharacterIndex);
@@ -154,8 +159,10 @@
             if ([lText length] > lSubRange.location + lSubRange.length)
             {
                 lText =  [self.BBCodeString substringWithRange:lSubRange];
+
             }
         }
+        
         if ([lText length] > 0)
         {
             [self addTextViewWithString:lText width:width];
@@ -164,7 +171,7 @@
         if (lNextTagIsQuote && lOpeningQuoteRange.location != NSNotFound)
         {
             NSString* lText = [self.BBCodeString substringFromIndex:self.currentCharacterIndex];
-            
+            NSLog(@"quoted text %@", lText);
             [self addQuoteWithString:lText width:width];
         }
         else if (lOpeningSpoilerRange.location != NSNotFound)
@@ -255,7 +262,8 @@
 }
 
 
-- (void)addQuoteWithString:(NSString*)BBCodeString width:(float)width
+- (void)addQuoteWithString:(NSString*)BBCodeString
+                     width:(float)width
 {
     NSString* lQuotedBBCode = [self getQuoteSubstringFromBBCodeString:BBCodeString];
     
@@ -332,6 +340,7 @@
                                                                      width - 10,
                                                                      kSpoilerClosedHeight)];
     lTitleLabel.textColor = textColor;
+    lTitleLabel.autoresizingMask = UIViewAutoresizingFlexibleWidth;
     lTitleLabel.font = [UIFont fontWithName:@"Helvetica-Bold" size:12];
     lTitleLabel.attributedText = [BBCodeDisplayer attributtedStringFromBBCode:@"[b]Spoiler[/b]" replaceSmiley:NO];
     [lSpoiler addSubview:lTitleLabel];
@@ -643,7 +652,7 @@
 - (NSString*)getSpoilerSubstringFromBBCodeString:(NSString*)BBCodeString
 {
     
-    NSRange lFirstOpenTagRange = [self spoilerRangeInString:_BBCodeString currentCharIndex:0];
+    NSRange lFirstOpenTagRange = [self spoilerRangeInString:BBCodeString currentCharIndex:0];
     
     if (lFirstOpenTagRange.location == NSNotFound)
     {
@@ -655,7 +664,7 @@
     
     do
     {
-        NSRange lCloseTagRange = [self endingSpoilerRangeInString:_BBCodeString currentCharIndex:lCurrentCharLocation];
+        NSRange lCloseTagRange = [self endingSpoilerRangeInString:BBCodeString currentCharIndex:lCurrentCharLocation];
         
         if (lCloseTagRange.location == NSNotFound)
         {
@@ -663,7 +672,7 @@
         }
         
         
-        NSRange lOpenTagRange = [self spoilerRangeInString:_BBCodeString currentCharIndex:lCurrentCharLocation];
+        NSRange lOpenTagRange = [self spoilerRangeInString:BBCodeString currentCharIndex:lCurrentCharLocation];
         
         
         if (lOpenTagRange.location != NSNotFound && lOpenTagRange.location < lCloseTagRange.location)
@@ -677,7 +686,7 @@
         {
             if (lNewOpenedTag == 0)
             {
-                return [_BBCodeString substringWithRange:NSMakeRange(lFirstOpenTagRange.location + [kOpeningSpoiler length], lCloseTagRange.location - lFirstOpenTagRange.location - [kOpeningSpoiler length])];
+                return [BBCodeString substringWithRange:NSMakeRange(lFirstOpenTagRange.location + [kOpeningSpoiler length], lCloseTagRange.location - lFirstOpenTagRange.location - [kOpeningSpoiler length])];
             }
             else
             {
@@ -735,7 +744,7 @@
 
 - (NSString*)getQuoteSubstringFromBBCodeString:(NSString*)BBCodeString
 {
-    NSRange lFirstOpenTagRange = [self quoteRangeInString:_BBCodeString currentCharIndex:0];
+    NSRange lFirstOpenTagRange = [self quoteRangeInString:BBCodeString currentCharIndex:0];
     
     if (lFirstOpenTagRange.location == NSNotFound)
     {
@@ -747,7 +756,7 @@
     
     do
     {
-        NSRange lCloseTagRange = [self endingQuoteRangeInString:_BBCodeString currentCharIndex:lCurrentCharLocation];
+        NSRange lCloseTagRange = [self endingQuoteRangeInString:BBCodeString currentCharIndex:lCurrentCharLocation];
         
         if (lCloseTagRange.location == NSNotFound)
         {
@@ -755,9 +764,9 @@
         }
         
         
-        NSRange lOpenTagRange = [self quoteRangeInString:_BBCodeString currentCharIndex:lCurrentCharLocation];
+        NSRange lOpenTagRange = [self quoteRangeInString:BBCodeString currentCharIndex:lCurrentCharLocation];
         
-        
+        // Citation imbriquées
         if (lOpenTagRange.location != NSNotFound && lOpenTagRange.location < lCloseTagRange.location)
         {
             lNewOpenedTag++;
@@ -769,7 +778,7 @@
         {
             if (lNewOpenedTag == 0)
             {
-                return [_BBCodeString substringWithRange:NSMakeRange(lFirstOpenTagRange.location + [kOpeningQuote length], lCloseTagRange.location - lFirstOpenTagRange.location - [kOpeningQuote length])];
+                return [BBCodeString substringWithRange:NSMakeRange(lFirstOpenTagRange.location + [kOpeningQuote length], lCloseTagRange.location - lFirstOpenTagRange.location - [kOpeningQuote length])];
             }
             else
             {
@@ -787,24 +796,24 @@
 }
 
 
-+ (NSArray*)getSubstringForOpeningTag:(NSString*)_Tag
-                          toEndingTag:(NSString*)_EndingTag
-                       fromBBCodeString:(NSString*)_BBCodeString
-                  currentCharLocation:(unsigned long)_CurrentCharLocation
++ (NSArray*)getSubstringForOpeningTag:(NSString*)tag
+                          toEndingTag:(NSString*)endingTag
+                       fromBBCodeString:(NSString*)BBCodeString
+                  currentCharLocation:(unsigned long)currentCharLocation
 {
     int lNewOpenedTag = 0;
     NSRange lOpenTagRange = NSMakeRange(NSNotFound, 0);
     
     
-    while (_CurrentCharLocation < [_BBCodeString length])
+    while (currentCharLocation < [BBCodeString length])
     {
-        NSRange lOpenTagRangeTmp = [_BBCodeString rangeOfString:_Tag
+        NSRange lOpenTagRangeTmp = [BBCodeString rangeOfString:tag
                                                       options:NSCaseInsensitiveSearch
-                                                        range:NSMakeRange(_CurrentCharLocation, [_BBCodeString length] - _CurrentCharLocation)];
+                                                        range:NSMakeRange(currentCharLocation, [BBCodeString length] - currentCharLocation)];
         
-        NSRange lCloseTagRange = [_BBCodeString rangeOfString:_EndingTag
+        NSRange lCloseTagRange = [BBCodeString rangeOfString:endingTag
                                                     options:NSCaseInsensitiveSearch
-                                                      range:NSMakeRange(_CurrentCharLocation, [_BBCodeString length] - _CurrentCharLocation)];
+                                                      range:NSMakeRange(currentCharLocation, [BBCodeString length] - currentCharLocation)];
         
         // Open Tag reached
         if (lOpenTagRangeTmp.location != NSNotFound && lCloseTagRange.location != NSNotFound && lOpenTagRangeTmp.location < lCloseTagRange.location)
@@ -816,7 +825,7 @@
             
             lNewOpenedTag++;
             
-            _CurrentCharLocation = lOpenTagRangeTmp.location + lOpenTagRangeTmp.length;
+            currentCharLocation = lOpenTagRangeTmp.location + lOpenTagRangeTmp.length;
         }
         // Close Tag reached
         else if (lCloseTagRange.location != NSNotFound)
@@ -824,7 +833,7 @@
             // No other Tag previously opened
             if (lNewOpenedTag <= 1 && lCloseTagRange.location != NSNotFound && lOpenTagRange.location != NSNotFound)
             {
-                NSString* lSubString = [[_BBCodeString substringFromIndex:lOpenTagRange.location + lOpenTagRange.length] substringToIndex:lCloseTagRange.location - lOpenTagRange.location - lOpenTagRange.length];
+                NSString* lSubString = [[BBCodeString substringFromIndex:lOpenTagRange.location + lOpenTagRange.length] substringToIndex:lCloseTagRange.location - lOpenTagRange.location - lOpenTagRange.length];
                 
                 
                 NSValue* lRangeValue = [NSValue valueWithRange:NSMakeRange(lOpenTagRange.location + lOpenTagRange.length, lCloseTagRange.location - lOpenTagRange.location - lOpenTagRange.length)];
@@ -835,7 +844,7 @@
             {
                 lNewOpenedTag--;
                 
-                _CurrentCharLocation = lCloseTagRange.location + lCloseTagRange.length;
+                currentCharLocation = lCloseTagRange.location + lCloseTagRange.length;
             }
         }
         else
@@ -848,10 +857,10 @@
 }
 
 
-+ (NSMutableDictionary*)getSubstringForLinkOpeningTag:(NSString*)_Tag
-                                          toEndingTag:(NSString*)_EndingTag
-                                       fromBBCodeString:(NSString*)_BBCodeString
-                                  currentCharLocation:(unsigned long)_CurrentCharLocation
++ (NSMutableDictionary*)getSubstringForLinkOpeningTag:(NSString*)tag
+                                          toEndingTag:(NSString*)endingTag
+                                       fromBBCodeString:(NSString*)BBCodeString
+                                  currentCharLocation:(unsigned long)currentCharLocation
 {
     int lNewOpenedTag = 0;
     NSRange lOpenTagRange = NSMakeRange(NSNotFound, 0);
@@ -861,16 +870,17 @@
     NSRange lURLRange = NSMakeRange(NSNotFound, 0);
     
     
-    while (_CurrentCharLocation < [_BBCodeString length])
+    while (currentCharLocation < [BBCodeString length])
     {
-        NSRange lOpenTagRangeTmp = [_BBCodeString rangeOfString:_Tag
+        NSRange lOpenTagRangeTmp = [BBCodeString rangeOfString:tag
                                                       options:NSCaseInsensitiveSearch
-                                                        range:NSMakeRange(_CurrentCharLocation, [_BBCodeString length] - _CurrentCharLocation)];
+                                                        range:NSMakeRange(currentCharLocation, [BBCodeString length] - currentCharLocation)];
         
         
-        NSRange lCloseTagRange = [_BBCodeString rangeOfString:_EndingTag
+        NSRange lCloseTagRange = [BBCodeString rangeOfString:endingTag
+                                  
                                                     options:NSCaseInsensitiveSearch
-                                                      range:NSMakeRange(_CurrentCharLocation, [_BBCodeString length] - _CurrentCharLocation)];
+                                                      range:NSMakeRange(currentCharLocation, [BBCodeString length] - currentCharLocation)];
         
         
         // Open Tag reached
@@ -880,17 +890,17 @@
             {
                 lOpenTagRange = lOpenTagRangeTmp;
                 
-                lURLRange = [_BBCodeString rangeOfString:@"]"
+                lURLRange = [BBCodeString rangeOfString:@"]"
                                                options:NSCaseInsensitiveSearch
-                                                 range:NSMakeRange(lOpenTagRangeTmp.location + lOpenTagRangeTmp.length, [_BBCodeString length] - lOpenTagRangeTmp.location - lOpenTagRangeTmp.length)];
+                                                 range:NSMakeRange(lOpenTagRangeTmp.location + lOpenTagRangeTmp.length, [BBCodeString length] - lOpenTagRangeTmp.location - lOpenTagRangeTmp.length)];
                 
-                if ([_BBCodeString length] > lOpenTagRangeTmp.location + lOpenTagRangeTmp.length + lURLRange.location - lOpenTagRangeTmp.location - lOpenTagRangeTmp.length)
+                if ([BBCodeString length] > lOpenTagRangeTmp.location + lOpenTagRangeTmp.length + lURLRange.location - lOpenTagRangeTmp.location - lOpenTagRangeTmp.length)
                 {
-                    lLink = [_BBCodeString substringWithRange:NSMakeRange(lOpenTagRangeTmp.location + lOpenTagRangeTmp.length, lURLRange.location - lOpenTagRangeTmp.location - lOpenTagRangeTmp.length)];
+                    lLink = [BBCodeString substringWithRange:NSMakeRange(lOpenTagRangeTmp.location + lOpenTagRangeTmp.length, lURLRange.location - lOpenTagRangeTmp.location - lOpenTagRangeTmp.length)];
                 }
                 
                 
-                NSRange lBuggedOpenTagRange = [lLink rangeOfString:_Tag
+                NSRange lBuggedOpenTagRange = [lLink rangeOfString:tag
                                                            options:NSCaseInsensitiveSearch
                                                              range:NSMakeRange(0, [lLink length])];
          
@@ -898,19 +908,19 @@
                 {
                     lOpenTagRange = NSMakeRange(lOpenTagRangeTmp.location + lOpenTagRangeTmp.length + lBuggedOpenTagRange.location, lBuggedOpenTagRange.length);
                     
-                    lURLRange = [_BBCodeString rangeOfString:@"]"
+                    lURLRange = [BBCodeString rangeOfString:@"]"
                                                    options:NSCaseInsensitiveSearch
-                                                     range:NSMakeRange(lOpenTagRange.location, [_BBCodeString length] - lOpenTagRange.location - lOpenTagRange.length)];
+                                                     range:NSMakeRange(lOpenTagRange.location, [BBCodeString length] - lOpenTagRange.location - lOpenTagRange.length)];
                
                     
-                    if ([_BBCodeString length] > lOpenTagRange.location + lOpenTagRange.length + lURLRange.location - lOpenTagRange.location - lOpenTagRange.length)
+                    if ([BBCodeString length] > lOpenTagRange.location + lOpenTagRange.length + lURLRange.location - lOpenTagRange.location - lOpenTagRange.length)
                     {
-                        lLink = [_BBCodeString substringWithRange:NSMakeRange(lOpenTagRange.location + lOpenTagRange.length, lURLRange.location - lOpenTagRange.location - lOpenTagRange.length)];
+                        lLink = [BBCodeString substringWithRange:NSMakeRange(lOpenTagRange.location + lOpenTagRange.length, lURLRange.location - lOpenTagRange.location - lOpenTagRange.length)];
                     }
                     
                     lNewOpenedTag++;
                     
-                    _CurrentCharLocation = lURLRange.location + lURLRange.length;
+                    currentCharLocation = lURLRange.location + lURLRange.length;
                     
                     continue;
                 }
@@ -918,7 +928,7 @@
             
             lNewOpenedTag++;
             
-            _CurrentCharLocation = lOpenTagRangeTmp.location + lOpenTagRangeTmp.length;
+            currentCharLocation = lOpenTagRangeTmp.location + lOpenTagRangeTmp.length;
         }
         // Close Tag reached
         else if (lCloseTagRange.location != NSNotFound)
@@ -928,13 +938,13 @@
             {
                 NSRange lDisplayedStringRange = NSMakeRange(lURLRange.location + lURLRange.length, lCloseTagRange.location - lURLRange.location - lURLRange.length);
                 
-                if ([_BBCodeString length] > lDisplayedStringRange.location && lDisplayedStringRange.length != FLT_MAX)
+                if ([BBCodeString length] > lDisplayedStringRange.location && lDisplayedStringRange.length != FLT_MAX)
                 {
-                    NSString* lSubStr = [_BBCodeString substringFromIndex:lDisplayedStringRange.location];
+                    NSString* lSubStr = [BBCodeString substringFromIndex:lDisplayedStringRange.location];
                     
                     if ([lSubStr length] > lDisplayedStringRange.length)
                     {
-                        NSString* lSubString = [[_BBCodeString substringFromIndex:lDisplayedStringRange.location] substringToIndex:lDisplayedStringRange.length];
+                        NSString* lSubString = [[BBCodeString substringFromIndex:lDisplayedStringRange.location] substringToIndex:lDisplayedStringRange.length];
                         
                         NSValue* lRangeValue = [NSValue valueWithRange:lDisplayedStringRange];
                         NSValue* lbbcodeTotalRange = [NSValue valueWithRange:NSMakeRange(lOpenTagRange.location, lCloseTagRange.location + lCloseTagRange.length - lOpenTagRange.location)];
@@ -953,19 +963,19 @@
                     }
                     else
                     {
-                        _CurrentCharLocation = lCloseTagRange.location + lCloseTagRange.length;
+                        currentCharLocation = lCloseTagRange.location + lCloseTagRange.length;
                     }
                 }
                 else 
                 {
-                    _CurrentCharLocation = lCloseTagRange.location + lCloseTagRange.length;
+                    currentCharLocation = lCloseTagRange.location + lCloseTagRange.length;
                 }
             }
             // Another open tag has been opened
             else
             {
                 lNewOpenedTag--;
-                _CurrentCharLocation = lCloseTagRange.location + lCloseTagRange.length;
+                currentCharLocation = lCloseTagRange.location + lCloseTagRange.length;
             }
         }
         else
@@ -984,7 +994,13 @@
     
     for (UIView* aView in self.subviews)
     {
-        if ([self.subviews indexOfObject:aView] > [self.subviews indexOfObject:_SubView])
+        if ([aView isKindOfClass:[UILabel class]])
+        {
+            NSLog(@"aView %@", aView);
+            NSLog(@"aView avant frame %@", [NSValue valueWithCGRect:aView.frame]);
+        }
+        
+        if ([self.subviews indexOfObject:aView] > [self.subviews indexOfObject:_SubView] && ![aView isKindOfClass:[UILabel class]])
         {
             if (aView.frame.size.width == 2)
             {
@@ -999,6 +1015,12 @@
                                          aView.frame.origin.y + _AdjustVal,
                                          aView.frame.size.width,
                                          aView.frame.size.height);
+            }
+            
+            
+            if ([aView isKindOfClass:[UILabel class]])
+            {
+                NSLog(@"aView apres frame %@", [NSValue valueWithCGRect:aView.frame]);
             }
         }
     }
