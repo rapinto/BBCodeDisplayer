@@ -118,10 +118,6 @@
     
     while (self.currentCharacterIndex < [BBCode length])
     {
-        NSLog(@"BBCode %lu", (unsigned long)[BBCode length]);
-        NSLog(@"self.currentCharacterIndex %lu",(unsigned long)self.currentCharacterIndex);
-        
-        
         BOOL lNextTagIsQuote = YES;
         NSRange lNextOpenedTagRange = NSMakeRange(NSNotFound, 0);
         
@@ -177,7 +173,7 @@
         if (lNextTagIsQuote && lOpeningQuoteRange.location != NSNotFound)
         {
             NSString* lText = [self.BBCodeString substringFromIndex:self.currentCharacterIndex];
-            NSLog(@"quoted text %@", lText);
+            
             [self addQuoteWithString:lText width:width];
         }
         else if (lOpeningSpoilerRange.location != NSNotFound)
@@ -462,22 +458,9 @@
     lRegExClosingTag = [lRegExClosingTag stringByReplacingOccurrencesOfString:@"]" withString:@"\\]"];
     lRegExClosingTag = [lRegExClosingTag stringByReplacingOccurrencesOfString:@"/" withString:@"\\/"];
     
-    
     NSRegularExpression* lRegex = [NSRegularExpression regularExpressionWithPattern:[NSString stringWithFormat:@"%@((.|\\n\n)*?)%@", lRegExOpenningTag, lRegExClosingTag]options:0 error:NULL];
     
-    if ([openingTag isEqualToString:@"[i]"])
-        NSLog(@"lRegex %@", lRegex.pattern);
-    
-    
     NSArray* lMatches = [lRegex matchesInString:attributedString.string options:1 range:NSMakeRange(0, [attributedString.string length])];
-    
-    
-    if ([openingTag isEqualToString:@"[i]"])
-        NSLog(@"attributedString.string ||%@||", attributedString.string);
-    
-    
-    if ([openingTag isEqualToString:@"[i]"])
-        NSLog(@"lMatches %@", lMatches);
     
     for (NSTextCheckingResult* aTextCheckingResult in lMatches)
     {
@@ -1024,12 +1007,6 @@
     
     for (UIView* aView in self.subviews)
     {
-        if ([aView isKindOfClass:[UILabel class]])
-        {
-            NSLog(@"aView %@", aView);
-            NSLog(@"aView avant frame %@", [NSValue valueWithCGRect:aView.frame]);
-        }
-        
         if ([self.subviews indexOfObject:aView] > [self.subviews indexOfObject:_SubView] && ![aView isKindOfClass:[UILabel class]])
         {
             if (aView.frame.size.width == 2)
@@ -1045,12 +1022,6 @@
                                          aView.frame.origin.y + _AdjustVal,
                                          aView.frame.size.width,
                                          aView.frame.size.height);
-            }
-            
-            
-            if ([aView isKindOfClass:[UILabel class]])
-            {
-                NSLog(@"aView apres frame %@", [NSValue valueWithCGRect:aView.frame]);
             }
         }
     }
