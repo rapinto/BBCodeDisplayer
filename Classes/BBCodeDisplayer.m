@@ -110,12 +110,18 @@
     }
     self.delegate = delegateObj;
     self.spoilerDelegate = spoilerDelegateObj;
-    self.BBCodeString = BBCode;
+    
+    self.BBCodeString = [[BBCode componentsSeparatedByCharactersInSet:[NSCharacterSet characterSetWithCharactersInString:@"\r"]] componentsJoinedByString:@""];
+    
     self.currentHeight = startingCurrentHeight;
     self.currentCharacterIndex = 0;
     
     while (self.currentCharacterIndex < [BBCode length])
     {
+        NSLog(@"BBCode %lu", (unsigned long)[BBCode length]);
+        NSLog(@"self.currentCharacterIndex %lu",(unsigned long)self.currentCharacterIndex);
+        
+        
         BOOL lNextTagIsQuote = YES;
         NSRange lNextOpenedTagRange = NSMakeRange(NSNotFound, 0);
         
@@ -179,6 +185,10 @@
             NSString* lText = [self.BBCodeString substringFromIndex:self.currentCharacterIndex];
             
             [self addSpoilerWithString:lText width:width];
+        }
+        else
+        {
+            self.currentCharacterIndex = [BBCode length];
         }
     }
     
@@ -453,8 +463,21 @@
     lRegExClosingTag = [lRegExClosingTag stringByReplacingOccurrencesOfString:@"/" withString:@"\\/"];
     
     
-    NSRegularExpression* lRegex = [NSRegularExpression regularExpressionWithPattern:[NSString stringWithFormat:@"%@((.|\\n)*?)%@", lRegExOpenningTag, lRegExClosingTag]options:0 error:NULL];
-    NSArray* lMatches = [lRegex matchesInString:attributedString.string options:0 range:NSMakeRange(0, [attributedString.string length])];
+    NSRegularExpression* lRegex = [NSRegularExpression regularExpressionWithPattern:[NSString stringWithFormat:@"%@((.|\\n\n)*?)%@", lRegExOpenningTag, lRegExClosingTag]options:0 error:NULL];
+    
+    if ([openingTag isEqualToString:@"[i]"])
+        NSLog(@"lRegex %@", lRegex.pattern);
+    
+    
+    NSArray* lMatches = [lRegex matchesInString:attributedString.string options:1 range:NSMakeRange(0, [attributedString.string length])];
+    
+    
+    if ([openingTag isEqualToString:@"[i]"])
+        NSLog(@"attributedString.string ||%@||", attributedString.string);
+    
+    
+    if ([openingTag isEqualToString:@"[i]"])
+        NSLog(@"lMatches %@", lMatches);
     
     for (NSTextCheckingResult* aTextCheckingResult in lMatches)
     {
@@ -527,7 +550,7 @@
     NSMutableAttributedString* AttributedString = [[NSMutableAttributedString alloc] initWithString:lTrimmedString];
    
     
-   [self replaceBBCodeOpeningTag:@"[s]"
+    [self replaceBBCodeOpeningTag:@"[s]"
                        closingTag:@"[/s]"
                  attributedString:AttributedString
                         attribute:NSStrikethroughStyleAttributeName
@@ -550,6 +573,13 @@
                  attributedString:AttributedString
                         attribute:NSUnderlineStyleAttributeName
                             value:[NSNumber numberWithInt:1]];
+    
+    [self replaceBBCodeOpeningTag:@"[up]"
+                       closingTag:@"[/up]"
+                 attributedString:AttributedString
+                        attribute:NSFontAttributeName
+                            value:[UIFont fontWithName:@"HelveticaNeue" size:14]];
+    
     
     [BBCodeDisplayer replaceBBCodeLinkWithAttributedString:AttributedString];
     
