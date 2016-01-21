@@ -467,8 +467,26 @@
         NSString* lSubString = [attributedString.string substringWithRange:NSMakeRange([aTextCheckingResult range].location - lRemovedCharacters, [aTextCheckingResult range].length)];
         lSubString = [lSubString substringWithRange:NSMakeRange([openingTag length], [lSubString length] - [openingTag length] - [closingTag length])];
         
-        [attributedString replaceCharactersInRange:NSMakeRange([aTextCheckingResult range].location - lRemovedCharacters, [aTextCheckingResult range].length) withString:lSubString];
-        [attributedString addAttribute:attributeName value:attributeValue range:NSMakeRange([aTextCheckingResult range].location - lRemovedCharacters, [lSubString length])];
+        
+        
+        NSUInteger rangeStringPos = [aTextCheckingResult range].location - lRemovedCharacters;
+        NSUInteger rangeStringLength = [aTextCheckingResult range].length;
+        if ([[attributedString string] length] > rangeStringPos + rangeStringLength)
+        {
+            [attributedString replaceCharactersInRange:NSMakeRange(rangeStringPos, rangeStringLength)
+                                            withString:lSubString];
+        }
+        
+        
+        rangeStringPos = [aTextCheckingResult range].location - lRemovedCharacters;
+        rangeStringLength = [lSubString length];
+        if ([[attributedString string] length] > rangeStringPos + rangeStringLength)
+        {
+            [attributedString addAttribute:attributeName
+                                     value:attributeValue
+                                     range:NSMakeRange(rangeStringPos, rangeStringLength)];
+        }
+        
         
         lRemovedCharacters += [openingTag length] + [closingTag length];
     }
