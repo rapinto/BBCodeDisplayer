@@ -458,10 +458,11 @@
     lRegExClosingTag = [lRegExClosingTag stringByReplacingOccurrencesOfString:@"]" withString:@"\\]"];
     lRegExClosingTag = [lRegExClosingTag stringByReplacingOccurrencesOfString:@"/" withString:@"\\/"];
     
-    NSRegularExpression* lRegex = [NSRegularExpression regularExpressionWithPattern:[NSString stringWithFormat:@"%@((.|\\n\n)*?)%@", lRegExOpenningTag, lRegExClosingTag]options:0 error:NULL];
+    NSRegularExpression* lRegex = [NSRegularExpression regularExpressionWithPattern:[NSString stringWithFormat:@"%@((.|\n|\r\n)*?)%@", lRegExOpenningTag, lRegExClosingTag]options:0 error:NULL];
     
     NSArray* lMatches = [lRegex matchesInString:attributedString.string options:1 range:NSMakeRange(0, [attributedString.string length])];
     
+    NSLog(@"openingTag %@", openingTag);
     for (NSTextCheckingResult* aTextCheckingResult in lMatches)
     {
         NSString* lSubString = [attributedString.string substringWithRange:NSMakeRange([aTextCheckingResult range].location - lRemovedCharacters, [aTextCheckingResult range].length)];
@@ -471,7 +472,14 @@
         
         NSUInteger rangeStringPos = [aTextCheckingResult range].location - lRemovedCharacters;
         NSUInteger rangeStringLength = [aTextCheckingResult range].length;
-        if ([[attributedString string] length] > rangeStringPos + rangeStringLength)
+        
+        NSLog(@"[[attributedString string] length] %lu", (unsigned long)[[attributedString string] length]);
+        NSLog(@"rangeStringPos %lu", (unsigned long)rangeStringPos);
+        NSLog(@"rangeStringLength %lu", (unsigned long)rangeStringLength);
+        NSLog(@"total %lu", (unsigned long)rangeStringPos + (unsigned long)rangeStringLength);
+        
+        
+        if ([[attributedString string] length] >= rangeStringPos + rangeStringLength)
         {
             [attributedString replaceCharactersInRange:NSMakeRange(rangeStringPos, rangeStringLength)
                                             withString:lSubString];
@@ -480,7 +488,7 @@
         
         rangeStringPos = [aTextCheckingResult range].location - lRemovedCharacters;
         rangeStringLength = [lSubString length];
-        if ([[attributedString string] length] > rangeStringPos + rangeStringLength)
+        if ([[attributedString string] length] >= rangeStringPos + rangeStringLength)
         {
             [attributedString addAttribute:attributeName
                                      value:attributeValue
