@@ -462,7 +462,6 @@
     
     NSArray* lMatches = [lRegex matchesInString:attributedString.string options:1 range:NSMakeRange(0, [attributedString.string length])];
     
-    NSLog(@"openingTag %@", openingTag);
     for (NSTextCheckingResult* aTextCheckingResult in lMatches)
     {
         NSString* lSubString = [attributedString.string substringWithRange:NSMakeRange([aTextCheckingResult range].location - lRemovedCharacters, [aTextCheckingResult range].length)];
@@ -472,12 +471,6 @@
         
         NSUInteger rangeStringPos = [aTextCheckingResult range].location - lRemovedCharacters;
         NSUInteger rangeStringLength = [aTextCheckingResult range].length;
-        
-        NSLog(@"[[attributedString string] length] %lu", (unsigned long)[[attributedString string] length]);
-        NSLog(@"rangeStringPos %lu", (unsigned long)rangeStringPos);
-        NSLog(@"rangeStringLength %lu", (unsigned long)rangeStringLength);
-        NSLog(@"total %lu", (unsigned long)rangeStringPos + (unsigned long)rangeStringLength);
-        
         
         if ([[attributedString string] length] >= rangeStringPos + rangeStringLength)
         {
